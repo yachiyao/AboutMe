@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎈 森林幼兒園 - 歡樂幸運抽籤機 🎈</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti for winning celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Google Fonts: Zen Maru Gothic for super cute rounded typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      font-family: 'Zen Maru Gothic', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* 可愛童趣背景與飄浮雲朵 */
+    body {
+      background: linear-gradient(180deg, #bbf2f6 0%, #ffe9c7 50%, #ffd1dc 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    @keyframes floatCloud {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(120vw); }
+    }
+
+    .cloud-slow {
+      animation: floatCloud 45s linear infinite;
+    }
+    .cloud-fast {
+      animation: floatCloud 28s linear infinite;
+    }
+
+    /* 彈跳搖擺動畫 */
+    @keyframes gentleBounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-8px) scale(1.02); }
+    }
+    .bounce-gentle {
+      animation: gentleBounce 2.5s ease-in-out infinite;
+    }
+
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(3deg); }
+    }
+    .wiggle {
+      animation: wiggle 1.2s ease-in-out infinite;
+    }
+
+    /* 3D 質感大按鈕 */
+    .btn-3d {
+      transition: all 0.1s ease;
+      box-shadow: 0 10px 0 #ea580c, 0 14px 20px rgba(0, 0, 0, 0.25);
+    }
+    .btn-3d:active:not(:disabled) {
+      transform: translateY(6px);
+      box-shadow: 0 4px 0 #ea580c, 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+    .btn-3d:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: 0 4px 0 #9ca3af;
+    }
+
+    /* 扭蛋球滾動晃動動畫 */
+    @keyframes rumble {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      20% { transform: translate(-3px, 0px) rotate(4deg); }
+      40% { transform: translate(3px, -2px) rotate(-4deg); }
+      60% { transform: translate(-2px, 2px) rotate(3deg); }
+      80% { transform: translate(2px, -1px) rotate(-3deg); }
+      100% { transform: translate(1px, 1px) rotate(0deg); }
+    }
+    .is-rumbling {
+      animation: rumble 0.12s linear infinite;
+    }
+
+    /* 得獎卡片彈出縮放 */
+    @keyframes popIn {
+      0% { transform: scale(0.3) rotate(-15deg); opacity: 0; }
+      70% { transform: scale(1.15) rotate(5deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .pop-in {
+      animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* 滾輪條美化 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #fdf2f8;
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #f472b6;
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="relative flex flex-col justify-between items-center min-h-screen text-slate-800 p-3 sm:p-6">
+
+  <!-- 背景漂浮小雲朵 (裝飾) -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute top-6 left-0 text-white/70 text-7xl cloud-slow">☁️</div>
+    <div class="absolute top-28 left-10 text-white/60 text-5xl cloud-fast" style="animation-delay: -10s;">☁️</div>
+    <div class="absolute top-16 right-10 text-white/60 text-8xl cloud-slow" style="animation-delay: -22s;">☁️</div>
+    <div class="absolute bottom-10 left-1/4 text-white/50 text-6xl cloud-fast" style="animation-delay: -18s;">🌈</div>
+  </div>
+
+  <!-- 頂部導航與狀態列 -->
+  <header class="w-full max-w-4xl flex items-center justify-between z-10 bg-white/80 backdrop-blur-md px-4 py-3 rounded-3xl shadow-lg border-4 border-pink-200">
+    <div class="flex items-center space-x-2">
+      <span class="text-3xl wiggle">🦁</span>
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black text-pink-600 tracking-wide flex items-center gap-2">
+          幼兒園幸運輪盤
+          <span class="text-xs bg-yellow-300 text-yellow-900 px-2.5 py-0.5 rounded-full font-bold shadow-sm">課堂抽籤</span>
+        </h1>
+        <p class="text-xs text-pink-400 font-bold" id="statusMessage">載入名單中...</p>
+      </div>
+    </div>
+
+    <!-- 右側功能按鈕群 -->
+    <div class="flex items-center space-x-2">
+      <!-- 語音朗讀開關 -->
+      <button id="toggleTtsBtn" class="flex items-center gap-1 text-xs sm:text-sm font-bold bg-pink-100 hover:bg-pink-200 text-pink-700 px-3 py-2 rounded-2xl transition border-2 border-pink-300">
+        <span id="ttsIcon">🔊</span>
+        <span class="hidden sm:inline">讀名字</span>
+      </button>
+
+      <!-- 音效開關 -->
+      <button id="toggleSoundBtn" class="flex items-center gap-1 text-xs sm:text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2 rounded-2xl transition border-2 border-amber-300">
+        <span id="soundIcon">🎵</span>
+        <span class="hidden sm:inline">音效</span>
+      </button>
+
+      <!-- 設定名單按鈕 -->
+      <button id="openConfigBtn" class="flex items-center gap-1 text-xs sm:text-sm font-bold bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded-2xl transition border-2 border-purple-300">
+        <span>⚙️</span>
+        <span class="hidden sm:inline">名單管理</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 抽籤主視覺區塊 -->
+  <main class="w-full max-w-4xl my-auto py-6 flex flex-col items-center justify-center z-10">
+
+    <!-- 主展示卡片容器 -->
+    <div class="relative w-full max-w-lg bg-white/95 rounded-[40px] p-6 sm:p-8 shadow-2xl border-8 border-yellow-300 flex flex-col items-center text-center">
+      
+      <!-- 可愛耳朵裝飾 (貓咪/熊熊感) -->
+      <div class="absolute -top-7 left-12 w-14 h-14 bg-pink-400 rounded-t-full border-4 border-yellow-300 -z-10 shadow-inner"></div>
+      <div class="absolute -top-7 right-12 w-14 h-14 bg-pink-400 rounded-t-full border-4 border-yellow-300 -z-10 shadow-inner"></div>
+
+      <!-- 倒數 / 狀態小告示牌 -->
+      <div class="flex items-center justify-center gap-3 bg-gradient-to-r from-amber-100 via-pink-100 to-amber-100 px-5 py-2 rounded-full border-2 border-pink-300 mb-5 shadow-inner">
+        <span class="text-xl">🌟</span>
+        <span id="poolCounter" class="text-sm sm:text-base font-extrabold text-pink-700">準備抽出下一位小幫手！</span>
+        <span class="text-xl">🌟</span>
+      </div>
+
+      <!-- 滾動大展示窗 -->
+      <div id="displayStage" class="w-full h-56 sm:h-64 bg-gradient-to-b from-sky-100 via-white to-pink-50 rounded-3xl border-4 border-dashed border-sky-300 flex flex-col items-center justify-center relative overflow-hidden shadow-inner p-4">
+        
+        <!-- 待機與抽籤中的動態內容 -->
+        <div id="idleState" class="flex flex-col items-center justify-center transition-all">
+          <div id="animalAvatar" class="text-7xl sm:text-8xl mb-3 bounce-gentle drop-shadow-md">🐥</div>
+          <div id="candidateName" class="text-4xl sm:text-5xl font-black text-sky-600 tracking-wider">
+            誰最幸運呢？
+          </div>
+          <p id="candidateSub" class="text-sm font-bold text-slate-400 mt-2">按下下方按鈕開始抽籤</p>
+        </div>
+
+        <!-- 中獎慶祝圖示特效 -->
+        <div id="starDecorations" class="hidden absolute inset-0 pointer-events-none flex justify-between p-4">
+          <span class="text-4xl animate-spin">✨</span>
+          <span class="text-4xl animate-bounce">🎉</span>
+          <span class="text-4xl animate-pulse">⭐</span>
+          <span class="text-4xl animate-bounce">🎈</span>
+        </div>
+      </div>
+
+      <!-- 控制抽籤按鈕 -->
+      <div class="mt-7 w-full flex flex-col items-center">
+        <button id="drawBtn" class="btn-3d w-full max-w-xs py-4 px-6 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:brightness-105 rounded-full text-white font-black text-2xl sm:text-3xl tracking-widest border-4 border-white flex items-center justify-center gap-3">
+          <span>🎲</span>
+          <span id="btnText">開始抽籤！</span>
+        </button>
+
+        <!-- 模式設定快捷開關 -->
+        <div class="mt-4 flex items-center justify-center gap-4 text-xs sm:text-sm font-bold text-slate-600">
+          <label class="flex items-center gap-2 cursor-pointer bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200 hover:bg-amber-100 transition">
+            <input type="checkbox" id="noRepeatCheckbox" checked class="w-4 h-4 accent-pink-500 rounded">
+            <span>抽出後先休息 (不重複)</span>
+          </label>
+          <button id="resetPoolBtn" class="text-pink-600 hover:text-pink-700 underline flex items-center gap-1">
+            <span>🔄</span> 重新入籤
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 底部：已抽到名單的可愛抽屜/小卡片 -->
+    <div class="w-full max-w-xl mt-6 bg-white/70 backdrop-blur-md rounded-3xl p-4 border-2 border-white shadow-md">
+      <div class="flex items-center justify-between mb-2 px-2">
+        <h3 class="font-black text-slate-700 text-sm flex items-center gap-1.5">
+          <span>🏆</span> 今日幸運小幫手榜單 (<span id="drawnCount">0</span>人)
+        </h3>
+        <button id="clearHistoryBtn" class="text-xs text-rose-500 hover:text-rose-700 font-bold">清空紀錄</button>
+      </div>
+
+      <div id="historyList" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-1 text-xs">
+        <span class="text-slate-400 italic">還沒有人抽中喔，快按開始按鈕！</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 底部版權/溫馨提示 -->
+  <footer class="z-10 text-xs font-bold text-slate-500/80 mb-2 text-center">
+    🌈 幼兒園歡樂課堂小助手 🌟 快樂學習每一天
+  </footer>
+
+  <!-- 名單管理對話框 Modal -->
+  <div id="configModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border-4 border-purple-200">
+      <div class="flex items-center justify-between pb-3 border-b border-purple-100">
+        <h3 class="text-lg font-black text-purple-700 flex items-center gap-2">
+          <span>📝</span> 學生名單管理
+        </h3>
+        <button id="closeConfigBtn" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Google 試算表 CSV 網址：</label>
+          <div class="flex gap-2">
+            <input type="text" id="csvUrlInput" class="w-full text-xs p-2.5 rounded-xl border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-purple-50/50 font-mono" placeholder="請輸入 CSV 發布連結">
+            <button id="reloadCsvBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-3 py-1.5 text-xs rounded-xl flex-shrink-0 transition">
+              重新載入
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1">預設已自動載入您提供的 Google 試算表。</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">
+            目前名單 (一行一個名字，可手動修改)：
+          </label>
+          <textarea id="manualTextarea" rows="6" class="w-full text-sm p-3 rounded-2xl border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-slate-50"></textarea>
+          <div class="flex justify-between items-center text-xs text-slate-500 mt-1">
+            <span>總共有 <strong id="modalCount" class="text-purple-600">0</strong> 位小朋友</span>
+            <button id="restoreDefaultBtn" class="text-purple-600 hover:underline">還原預設示範</button>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button id="saveManualBtn" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-95 text-white font-black py-2.5 rounded-2xl shadow-md transition">
+            儲存名單並更新
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript 互動程式邏輯 -->
+  <script>
+    // --- 預設組態與狀態 ---
+    const DEFAULT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS91-Mpt4qHnca4CiRQgULl-uvm92BDcOQKe1_npNfVNkCzpWxVn7WDnzp9Rr--PKBkRoIRqk0HuWO1/pub?output=csv";
+
+    // 豐富的動物 Emoji 庫，增加幼兒趣味
+    const ANIMAL_AVATARS = [
+      "🐰", "🐻", "🦁", "🐼", "🐨", "🐯", "🦊", "🐸", "🐵", "🦄",
+      "🐥", "🐧", "🐙", "🐬", "🐶", "🐱", "🦒", "🐘", "🐹", "🦔"
+    ];
+
+    // 預設備用名單（若網路斷線或跨域受阻時使用）
+    const FALLBACK_NAMES = [
+      "小丸子", "巧虎", "琪琪", "桃樂比", "妙妙", 
+      "皮卡丘", "哆啦A夢", "麵包超人", "佩佩豬", "喬治",
+      "小明", "美美", "安安", "樂樂", "晴晴"
+    ];
+
+    // 狀態變數
+    let allStudents = [];      // 完整名單
+    let availableStudents = [];// 待抽籤名單
+    let drawnHistory = [];     // 歷史中獎清單
+    let isDrawing = false;      // 是否正在抽籤
+    let soundEnabled = true;   // 是否開啟音效
+    let ttsEnabled = true;     // 是否語音朗讀
+
+    // DOM 元素快取
+    const drawBtn = document.getElementById('drawBtn');
+    const btnText = document.getElementById('btnText');
+    const displayStage = document.getElementById('displayStage');
+    const animalAvatar = document.getElementById('animalAvatar');
+    const candidateName = document.getElementById('candidateName');
+    const candidateSub = document.getElementById('candidateSub');
+    const poolCounter = document.getElementById('poolCounter');
+    const statusMessage = document.getElementById('statusMessage');
+    const noRepeatCheckbox = document.getElementById('noRepeatCheckbox');
+    const resetPoolBtn = document.getElementById('resetPoolBtn');
+    const historyList = document.getElementById('historyList');
+    const drawnCount = document.getElementById('drawnCount');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const starDecorations = document.getElementById('starDecorations');
+
+    const configModal = document.getElementById('configModal');
+    const openConfigBtn = document.getElementById('openConfigBtn');
+    const closeConfigBtn = document.getElementById('closeConfigBtn');
+    const csvUrlInput = document.getElementById('csvUrlInput');
+    const reloadCsvBtn = document.getElementById('reloadCsvBtn');
+    const manualTextarea = document.getElementById('manualTextarea');
+    const modalCount = document.getElementById('modalCount');
+    const saveManualBtn = document.getElementById('saveManualBtn');
+    const restoreDefaultBtn = document.getElementById('restoreDefaultBtn');
+
+    const toggleSoundBtn = document.getElementById('toggleSoundBtn');
+    const soundIcon = document.getElementById('soundIcon');
+    const toggleTtsBtn = document.getElementById('toggleTtsBtn');
+    const ttsIcon = document.getElementById('ttsIcon');
+
+    // --- Web Audio 音效產生器 (無須外連音效檔，穩定迅速) ---
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new AudioContextClass();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    // 撥動卡嗒聲 (滾動時)
+    function playTickSound() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(350 + Math.random() * 200, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+      } catch (e) {
+        // 忽略音效錯誤
+      }
+    }
+
+    // 歡樂中獎大和弦音效
+    function playWinSound() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        // 幼兒園風格大三和弦 + 高音叮咚: C5, E5, G5, C6
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+          gain.gain.setValueAtTime(0.18, ctx.currentTime + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + idx * 0.08 + 0.7);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.08);
+          osc.stop(ctx.currentTime + idx * 0.08 + 0.7);
+        });
+      } catch (e) {
+        // 忽略音效錯誤
+      }
+    }
+
+    // --- Web Speech 語音朗讀名字 ---
+    function speakName(name) {
+      if (!ttsEnabled || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel(); // 停止先前的發音
+      const textToSpeak = `恭喜 ${name} 小朋友！`;
+      const utter = new SpeechSynthesisUtterance(textToSpeak);
+      utter.lang = 'zh-TW';
+      utter.pitch = 1.35; // 稍微提高音調，更具親和力
+      utter.rate = 1.0;
+      window.speechSynthesis.speak(utter);
+    }
+
+    // --- CSV 解析器 ---
+    function parseCSV(csvText) {
+      const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      const names = [];
+
+      lines.forEach((line, index) => {
+        // 簡單分割逗號
+        const cols = line.split(',').map(c => c.replace(/^["']|["']$/g, '').trim());
+        // 嘗試找出有文字的欄位
+        for (let col of cols) {
+          if (col && !col.toLowerCase().includes('姓名') && !col.toLowerCase().includes('name') && !col.toLowerCase().includes('學號') && isNaN(col)) {
+            names.push(col);
+            break;
+          } else if (col && index > 0 && isNaN(col)) {
+            // 如果只有一欄文字
+            names.push(col);
+            break;
+          }
+        }
+      });
+
+      // 如果上述過濾拿不到，但有字串直接當名字
+      if (names.length === 0) {
+        lines.forEach(l => {
+          const first = l.split(',')[0].replace(/^["']|["']$/g, '').trim();
+          if (first) names.push(first);
+        });
+      }
+
+      return Array.from(new Set(names)); // 去除重複
+    }
+
+    // --- 載入 Google 試算表名單 ---
+    async function fetchStudentList(url) {
+      statusMessage.textContent = "正在連線取得名單...";
+      try {
+        const response = await fetch(url, { cache: 'no-cache' });
+        if (!response.ok) throw new Error('無法連線到試算表');
+        const text = await response.text();
+        const parsed = parseCSV(text);
+
+        if (parsed.length > 0) {
+          allStudents = [...parsed];
+          statusMessage.textContent = `成功載入 ${allStudents.length} 位小朋友！`;
+        } else {
+          throw new Error('名單格式空白');
+        }
+      } catch (err) {
+        console.warn('網路讀取失敗，載入備用名單:', err);
+        allStudents = [...FALLBACK_NAMES];
+        statusMessage.textContent = `已載入示範名單 (${allStudents.length} 人)`;
+      }
+
+      resetPool();
+    }
+
+    // --- 重設待抽籤水庫 ---
+    function resetPool() {
+      availableStudents = [...allStudents];
+      updatePoolUI();
+      candidateName.textContent = "誰最幸運呢？";
+      candidateSub.textContent = "按下下方按鈕開始抽籤";
+      animalAvatar.textContent = "🐥";
+      animalAvatar.className = "text-7xl sm:text-8xl mb-3 bounce-gentle drop-shadow-md";
+      starDecorations.classList.add('hidden');
+    }
+
+    // --- 更新畫面上的計數器 ---
+    function updatePoolUI() {
+      poolCounter.textContent = `剩餘可抽：${availableStudents.length} 人 / 總共：${allStudents.length} 人`;
+      drawnCount.textContent = drawnHistory.length;
+      modalCount.textContent = allStudents.length;
+
+      // 更新手動設定框
+      manualTextarea.value = allStudents.join('\n');
+
+      // 更新歷史榜單
+      if (drawnHistory.length === 0) {
+        historyList.innerHTML = `<span class="text-slate-400 italic">還沒有人抽中喔，快按開始按鈕！</span>`;
+      } else {
+        historyList.innerHTML = drawnHistory.map((item, idx) => `
+          <span class="inline-flex items-center gap-1 bg-pink-100 border border-pink-300 text-pink-700 px-3 py-1 rounded-full font-bold shadow-sm animate-fadeIn">
+            <span>${item.avatar}</span>
+            <span>${item.name}</span>
+            <span class="text-[10px] text-pink-400">#${drawnHistory.length - idx}</span>
+          </span>
+        `).join('');
+      }
+
+      // 如果不重複模式且抽完了
+      if (noRepeatCheckbox.checked && availableStudents.length === 0) {
+        drawBtn.disabled = true;
+        btnText.textContent = "全部都抽過囉！";
+        candidateName.textContent = "🎉 太棒了！";
+        candidateSub.textContent = "每位小朋友都抽過一次囉！請點「重新入籤」";
+      } else {
+        drawBtn.disabled = false;
+        btnText.textContent = "開始抽籤！";
+      }
+    }
+
+    // --- 慶祝彩色紙花 ---
+    function triggerConfetti() {
+      if (typeof confetti !== 'function') return;
+      const duration = 2.2 * 1000;
+      const animationEnd = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.75 },
+          colors: ['#f472b6', '#38bdf8', '#facc15', '#4ade80', '#c084fc']
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.75 },
+          colors: ['#f472b6', '#38bdf8', '#facc15', '#4ade80', '#c084fc']
+        });
+
+        if (Date.now() < animationEnd) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
+    }
+
+    // --- 核心抽籤邏輯 ---
+    function startDraw() {
+      if (isDrawing) return;
+
+      const isNoRepeat = noRepeatCheckbox.checked;
+      const currentPool = isNoRepeat ? availableStudents : allStudents;
+
+      if (currentPool.length === 0) {
+        resetPool();
+        return;
+      }
+
+      isDrawing = true;
+      drawBtn.disabled = true;
+      starDecorations.classList.add('hidden');
+      displayStage.classList.add('is-rumbling');
+
+      let rollCount = 0;
+      const maxRolls = 28; // 滾動次數
+      let currentInterval = 50; // 起始旋轉毫秒速度
+      let chosenStudent = "";
+      let chosenAvatar = "🌟";
+
+      function rollStep() {
+        // 隨機切換展示名字與動物
+        const randomIndex = Math.floor(Math.random() * currentPool.length);
+        const randomAvatar = ANIMAL_AVATARS[Math.floor(Math.random() * ANIMAL_AVATARS.length)];
+        
+        chosenStudent = currentPool[randomIndex];
+        chosenAvatar = randomAvatar;
+
+        animalAvatar.textContent = randomAvatar;
+        candidateName.textContent = chosenStudent;
+        candidateSub.textContent = "正在挑選幸運星...";
+        animalAvatar.className = "text-7xl sm:text-8xl mb-3 drop-shadow-md";
+
+        playTickSound();
+        rollCount++;
+
+        if (rollCount < maxRolls) {
+          // 動態漸慢效果，營造期待與興奮感
+          if (rollCount > maxRolls - 10) {
+            currentInterval += 25;
+          } else if (rollCount > maxRolls - 5) {
+            currentInterval += 40;
+          }
+          setTimeout(rollStep, currentInterval);
+        } else {
+          // 完成抽籤
+          finishDraw(chosenStudent, chosenAvatar);
+        }
+      }
+
+      rollStep();
+    }
+
+    // --- 抽籤完成處理 ---
+    function finishDraw(winnerName, avatar) {
+      displayStage.classList.remove('is-rumbling');
+      isDrawing = false;
+      drawBtn.disabled = false;
+
+      // 震撼彈跳特效
+      animalAvatar.className = "text-8xl sm:text-9xl mb-3 pop-in drop-shadow-xl";
+      candidateName.className = "text-5xl sm:text-6xl font-black text-pink-600 pop-in tracking-wider drop-shadow-sm";
+      candidateSub.textContent = "✨ 恭喜你被選中啦！ ✨";
+      starDecorations.classList.remove('hidden');
+
+      // 扣除名單 (若不重複)
+      if (noRepeatCheckbox.checked) {
+        const idx = availableStudents.indexOf(winnerName);
+        if (idx !== -1) {
+          availableStudents.splice(idx, 1);
+        }
+      }
+
+      // 加入紀錄列表前端
+      drawnHistory.unshift({ name: winnerName, avatar: avatar });
+
+      // 音效、紙花與語音朗讀
+      playWinSound();
+      triggerConfetti();
+      speakName(winnerName);
+
+      // 更新介面
+      updatePoolUI();
+    }
+
+    // --- 事件監聽綁定 ---
+
+    // 抽籤按鈕
+    drawBtn.addEventListener('click', () => {
+      getAudioContext(); // 確保瀏覽器解鎖音訊上下文
+      startDraw();
+    });
+
+    // 空白鍵抽籤快捷鍵
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !configModal.classList.contains('hidden') === false) {
+        // 如果沒打開設定視窗才觸發
+        if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          if (!isDrawing && !drawBtn.disabled) {
+            startDraw();
+          }
+        }
+      }
+    });
+
+    // 重新入籤
+    resetPoolBtn.addEventListener('click', () => {
+      resetPool();
+    });
+
+    // 清空歷史紀錄
+    clearHistoryBtn.addEventListener('click', () => {
+      drawnHistory = [];
+      updatePoolUI();
+    });
+
+    // 音效開關切換
+    toggleSoundBtn.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      soundIcon.textContent = soundEnabled ? '🎵' : '🔇';
+      toggleSoundBtn.classList.toggle('opacity-50', !soundEnabled);
+    });
+
+    // 朗讀開關切換
+    toggleTtsBtn.addEventListener('click', () => {
+      ttsEnabled = !ttsEnabled;
+      ttsIcon.textContent = ttsEnabled ? '🔊' : '🔈';
+      toggleTtsBtn.classList.toggle('opacity-50', !ttsEnabled);
+    });
+
+    // 不重複勾選變動
+    noRepeatCheckbox.addEventListener('change', () => {
+      updatePoolUI();
+    });
+
+    // 名單管理對話框開關
+    openConfigBtn.addEventListener('click', () => {
+      csvUrlInput.value = DEFAULT_CSV_URL;
+      manualTextarea.value = allStudents.join('\n');
+      configModal.classList.remove('hidden');
+    });
+
+    closeConfigBtn.addEventListener('click', () => {
+      configModal.classList.add('hidden');
+    });
+
+    configModal.addEventListener('click', (e) => {
+      if (e.target === configModal) configModal.classList.add('hidden');
+    });
+
+    // 重新從 CSV 載入
+    reloadCsvBtn.addEventListener('click', async () => {
+      const url = csvUrlInput.value.trim() || DEFAULT_CSV_URL;
+      await fetchStudentList(url);
+      configModal.classList.add('hidden');
+    });
+
+    // 手動儲存名單
+    saveManualBtn.addEventListener('click', () => {
+      const names = manualTextarea.value
+        .split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      if (names.length > 0) {
+        allStudents = Array.from(new Set(names));
+        resetPool();
+        statusMessage.textContent = `手動更新完成 (${allStudents.length} 人)`;
+        configModal.classList.add('hidden');
+      }
+    });
+
+    // 還原預設
+    restoreDefaultBtn.addEventListener('click', () => {
+      manualTextarea.value = FALLBACK_NAMES.join('\n');
+      modalCount.textContent = FALLBACK_NAMES.length;
+    });
+
+    manualTextarea.addEventListener('input', () => {
+      const lines = manualTextarea.value.split('\n').filter(s => s.trim().length > 0);
+      modalCount.textContent = lines.length;
+    });
+
+    // --- 頁面初始載入 ---
+    window.onload = function () {
+      fetchStudentList(DEFAULT_CSV_URL);
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>血壓健康日誌與每週趨勢分析</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN for trends -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-[-100%] opacity-0 pointer-events-none flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium"></div>
+
+  <!-- Header -->
+  <header class="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-red-400 flex items-center justify-center text-white shadow-md shadow-rose-200">
+          <i class="ph ph-heartbeat text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-slate-900 leading-tight">血壓健康紀錄管家</h1>
+          <p class="text-xs text-slate-500">每日規律測量・自動統計週平均與健康趨勢</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="exportBtn" title="匯出 CSV 備份" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-sm">
+          <i class="ph ph-download-simple text-base"></i>
+          <span class="hidden sm:inline">匯出紀錄</span>
+        </button>
+        <button id="importBtnTrigger" title="匯入資料" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-sm">
+          <i class="ph ph-upload-simple text-base"></i>
+          <span class="hidden sm:inline">匯入資料</span>
+        </button>
+        <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-grow space-y-6">
+
+    <!-- Top Stats Overview (Last 7 Days vs Past Average) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- 7-day Avg Systolic -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">近 7 天收縮壓平均 (高壓)</span>
+          <span class="p-1.5 rounded-lg bg-rose-50 text-rose-500"><i class="ph ph-arrow-up text-base"></i></span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="statSys" class="text-3xl font-extrabold text-slate-800">--</span>
+          <span class="text-xs text-slate-500 font-medium">mmHg</span>
+        </div>
+        <div id="statSysStatus" class="mt-2 text-xs font-medium text-slate-500 flex items-center gap-1">尚無資料</div>
+      </div>
+
+      <!-- 7-day Avg Diastolic -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">近 7 天舒張壓平均 (低壓)</span>
+          <span class="p-1.5 rounded-lg bg-blue-50 text-blue-500"><i class="ph ph-arrow-down text-base"></i></span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="statDia" class="text-3xl font-extrabold text-slate-800">--</span>
+          <span class="text-xs text-slate-500 font-medium">mmHg</span>
+        </div>
+        <div id="statDiaStatus" class="mt-2 text-xs font-medium text-slate-500 flex items-center gap-1">尚無資料</div>
+      </div>
+
+      <!-- 7-day Avg Pulse -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">近 7 天脈搏平均</span>
+          <span class="p-1.5 rounded-lg bg-amber-50 text-amber-500"><i class="ph ph-activity text-base"></i></span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="statPulse" class="text-3xl font-extrabold text-slate-800">--</span>
+          <span class="text-xs text-slate-500 font-medium">BPM</span>
+        </div>
+        <div id="statPulseStatus" class="mt-2 text-xs font-medium text-slate-500">正常範圍約 60~100</div>
+      </div>
+
+      <!-- Total Measured Days -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">總累積紀錄筆數</span>
+          <span class="p-1.5 rounded-lg bg-emerald-50 text-emerald-500"><i class="ph ph-calendar-check text-base"></i></span>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="statCount" class="text-3xl font-extrabold text-slate-800">0</span>
+          <span class="text-xs text-slate-500 font-medium">筆測量</span>
+        </div>
+        <div class="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1">
+          <i class="ph ph-check-circle"></i> 養成天天測量好習慣
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Layout: Form & Weekly Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left Column: New Entry Form & Reference Guideline (5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- Add Entry Card -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-5">
+            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <i class="ph ph-plus-circle text-rose-500 text-xl"></i>
+              新增血壓測量紀錄
+            </h2>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">722 居家測量原則</span>
+          </div>
+
+          <form id="recordForm" class="space-y-4">
+            <!-- Date & Time -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">測量日期</label>
+                <input type="date" id="inputDate" required class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">測量時間</label>
+                <input type="time" id="inputTime" required class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition">
+              </div>
+            </div>
+
+            <!-- Time of Day & Arm -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">時段分類</label>
+                <select id="inputPeriod" class="w-full text-sm px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-white">
+                  <option value="晨起">🌅 早晨 (起床後1小時內)</option>
+                  <option value="傍晚">🌇 下午 / 傍晚</option>
+                  <option value="睡前">🌙 睡前 (就寢前1小時內)</option>
+                  <option value="其他">🕒 其他時段</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">測量手臂</label>
+                <select id="inputArm" class="w-full text-sm px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-white">
+                  <option value="左手">左手 (左臂)</option>
+                  <option value="右手">右手 (右臂)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Numbers Input: Systolic, Diastolic, Pulse -->
+            <div class="grid grid-cols-3 gap-2.5 pt-1">
+              <div>
+                <label class="block text-xs font-semibold text-rose-700 mb-1">高壓 (收縮壓)</label>
+                <div class="relative">
+                  <input type="number" id="inputSys" min="50" max="250" placeholder="120" required class="w-full text-base font-bold px-3 py-2.5 rounded-xl border border-rose-200 bg-rose-50/30 text-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-400">
+                  <span class="absolute right-2 bottom-2.5 text-[10px] text-rose-400 font-normal">mmHg</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-blue-700 mb-1">低壓 (舒張壓)</label>
+                <div class="relative">
+                  <input type="number" id="inputDia" min="30" max="180" placeholder="80" required class="w-full text-base font-bold px-3 py-2.5 rounded-xl border border-blue-200 bg-blue-50/30 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <span class="absolute right-2 bottom-2.5 text-[10px] text-blue-400 font-normal">mmHg</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">心率 (脈搏)</label>
+                <div class="relative">
+                  <input type="number" id="inputPulse" min="30" max="220" placeholder="72" required class="w-full text-base font-bold px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                  <span class="absolute right-2 bottom-2.5 text-[10px] text-slate-400 font-normal">bpm</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Note / Memo -->
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">備註說明 (選填)</label>
+              <input type="text" id="inputNote" placeholder="例：服藥前、運動後、稍微頭暈、喝完咖啡等" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition">
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full py-3 px-4 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-medium rounded-xl shadow-md shadow-rose-200 transition duration-150 flex items-center justify-center gap-2">
+              <i class="ph ph-check-bold text-lg"></i>
+              儲存今日紀錄
+            </button>
+          </form>
+        </div>
+
+        <!-- WHO / Taiwan Standard Guidelines Card -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs text-slate-600 space-y-3">
+          <div class="flex items-center justify-between font-semibold text-slate-800">
+            <span class="flex items-center gap-1.5"><i class="ph ph-info text-blue-500 text-base"></i> 居家血壓標準參考 (台灣高血壓指引)</span>
+          </div>
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center py-1 border-b border-slate-100">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> 理想標準血壓</span>
+              <span class="font-medium text-slate-800">&lt; 120 / &lt; 80 mmHg</span>
+            </div>
+            <div class="flex justify-between items-center py-1 border-b border-slate-100">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> 正常偏高 (前期)</span>
+              <span class="font-medium text-slate-800">120-129 / &lt; 80 mmHg</span>
+            </div>
+            <div class="flex justify-between items-center py-1 border-b border-slate-100">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block"></span> 第一期高血壓</span>
+              <span class="font-medium text-slate-800">130-139 / 80-89 mmHg</span>
+            </div>
+            <div class="flex justify-between items-center py-1">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> 第二期高血壓</span>
+              <span class="font-medium text-slate-800">≥ 140 或 ≥ 90 mmHg</span>
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed pt-1">
+            * 居家測量建議遵循「722 原則」：連續 7 天量測、每天早晚 2 回合、每回合量測 2 次取平均值。
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Weekly Summaries & Trend Chart (7 cols) -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- Weekly Averages Card -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
+            <div>
+              <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i class="ph ph-chart-bar text-indigo-500 text-xl"></i>
+                每週平均統計報告 (Weekly Average)
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">系統依據週別自動彙總高低壓、脈搏及異常比率</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="flex items-center gap-1 text-slate-500"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>週高壓平均</span>
+              <span class="flex items-center gap-1 text-slate-500"><span class="w-2 h-2 rounded-full bg-teal-500"></span>週低壓平均</span>
+            </div>
+          </div>
+
+          <!-- Weekly Chart -->
+          <div class="mt-4 h-60 w-full">
+            <canvas id="weeklyChart"></canvas>
+          </div>
+
+          <!-- Weekly Aggregation Table -->
+          <div class="mt-4 overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs text-slate-600">
+              <thead class="bg-slate-50 text-slate-700 font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3">週別區間</th>
+                  <th class="py-2.5 px-3 text-center">測量次數</th>
+                  <th class="py-2.5 px-3 text-center">平均收縮壓 (高壓)</th>
+                  <th class="py-2.5 px-3 text-center">平均舒張壓 (低壓)</th>
+                  <th class="py-2.5 px-3 text-center">平均心率</th>
+                  <th class="py-2.5 px-3 text-center">週評估等級</th>
+                </tr>
+              </thead>
+              <tbody id="weeklyTableBody" class="divide-y divide-slate-100">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Records History Table -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+            <div class="flex items-center gap-2">
+              <i class="ph ph-clock-counter-clockwise text-emerald-500 text-xl"></i>
+              <h2 class="text-lg font-bold text-slate-800">歷史測量清單</h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="relative">
+                <input type="text" id="searchInput" placeholder="搜尋日期或備註..." class="text-xs px-3 py-1.5 pl-8 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400">
+                <i class="ph ph-magnifying-glass absolute left-2.5 top-2 text-slate-400 text-sm"></i>
+              </div>
+              <button id="clearAllBtn" class="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1.5 transition">清空全部</button>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div class="mt-3 overflow-x-auto custom-scrollbar max-h-80">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-700 font-semibold sticky top-0 border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3">測量時間</th>
+                  <th class="py-2.5 px-2">時段 / 臂</th>
+                  <th class="py-2.5 px-2 text-center">收縮壓 (高壓)</th>
+                  <th class="py-2.5 px-2 text-center">舒張壓 (低壓)</th>
+                  <th class="py-2.5 px-2 text-center">脈搏</th>
+                  <th class="py-2.5 px-2">狀態</th>
+                  <th class="py-2.5 px-3">備註</th>
+                  <th class="py-2.5 px-2 text-center">操作</th>
+                </tr>
+              </thead>
+              <tbody id="recordsTableBody" class="divide-y divide-slate-100">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Delete Modal Confirmation -->
+  <div id="confirmModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 space-y-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto text-2xl">
+        <i class="ph ph-trash"></i>
+      </div>
+      <div class="text-center">
+        <h3 id="modalTitle" class="text-base font-bold text-slate-900">確定要刪除嗎？</h3>
+        <p id="modalDesc" class="text-xs text-slate-500 mt-1">此動作執行後將無法復原資料。</p>
+      </div>
+      <div class="flex gap-2">
+        <button id="modalCancelBtn" class="flex-1 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">取消</button>
+        <button id="modalConfirmBtn" class="flex-1 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-semibold shadow-sm transition">確認刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="mt-auto py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-400">
+    血壓量測數值僅供自主健康管理與門診醫師參考，如有身體不適請立即就醫。
+  </footer>
+
+  <script>
+    // --- Application State & Sample Mock Data ---
+    const STORAGE_KEY = 'bp_tracker_records_v1';
+    let records = [];
+    let chartInstance = null;
+    let pendingDeleteId = null;
+
+    // Helper: Initialize empty record list without dummy data
+    function getSampleData() {
+      return [];
+    }
+
+    // --- Helper Functions ---
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      const bgColors = {
+        success: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        error: 'bg-rose-50 text-rose-800 border-rose-200',
+        info: 'bg-slate-800 text-white border-slate-700'
+      };
+      const icons = {
+        success: '<i class="ph ph-check-circle text-emerald-500 text-lg"></i>',
+        error: '<i class="ph ph-warning-circle text-rose-500 text-lg"></i>',
+        info: '<i class="ph ph-info text-blue-400 text-lg"></i>'
+      };
+
+      toast.className = `fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold ${bgColors[type] || bgColors.info}`;
+      toast.innerHTML = `${icons[type] || icons.info} <span>${message}</span>`;
+
+      setTimeout(() => {
+        toast.classList.replace('translate-y-0', 'translate-y-[-100%]');
+        toast.classList.replace('opacity-100', 'opacity-0');
+      }, 2600);
+    }
+
+    // Categorize Blood Pressure based on standard clinical guidelines
+    function getBPCategory(sys, dia) {
+      if (sys >= 140 || dia >= 90) {
+        return { label: '二期高壓', color: 'bg-red-100 text-red-700 border-red-200', badge: 'bg-red-500' };
+      } else if ((sys >= 130 && sys <= 139) || (dia >= 80 && dia <= 89)) {
+        return { label: '一期高壓', color: 'bg-orange-100 text-orange-800 border-orange-200', badge: 'bg-orange-500' };
+      } else if ((sys >= 120 && sys <= 129) && dia < 80) {
+        return { label: '正常偏高', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', badge: 'bg-yellow-400' };
+      } else {
+        return { label: '標準理想', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', badge: 'bg-emerald-500' };
+      }
+    }
+
+    // Determine ISO Week string (YYYY-Www) & Range Description
+    function getWeekInfo(dateString) {
+      const target = new Date(dateString + 'T00:00:00');
+      const dayNr = (target.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+      target.setDate(target.getDate() - dayNr + 3); // Nearest Thursday defines week year
+      const firstThursday = target.valueOf();
+      target.setMonth(0, 1);
+      if (target.getDay() !== 4) {
+        target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+      }
+      const weekNumber = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+      const year = new Date(firstThursday).getFullYear();
+
+      // Find Monday & Sunday of this target date's week
+      const orig = new Date(dateString + 'T00:00:00');
+      const diffToMonday = (orig.getDay() + 6) % 7;
+      const monday = new Date(orig);
+      monday.setDate(orig.getDate() - diffToMonday);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      const formatMD = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
+      return {
+        key: `${year}-W${weekNumber.toString().padStart(2, '0')}`,
+        label: `${year} 第${weekNumber}週`,
+        range: `${formatMD(monday)} ~ ${formatMD(sunday)}`,
+        mondayDate: monday
+      };
+    }
+
+    // --- Core Logic: Aggregations ---
+    function calculateWeeklyAverages(data) {
+      const grouped = {};
+      data.forEach(r => {
+        const info = getWeekInfo(r.date);
+        if (!grouped[info.key]) {
+          grouped[info.key] = {
+            key: info.key,
+            label: info.label,
+            range: info.range,
+            mondayDate: info.mondayDate,
+            items: []
+          };
+        }
+        grouped[info.key].items.push(r);
+      });
+
+      // Calculate stats per week
+      const result = Object.values(grouped).map(group => {
+        const count = group.items.length;
+        const sumSys = group.items.reduce((acc, curr) => acc + curr.sys, 0);
+        const sumDia = group.items.reduce((acc, curr) => acc + curr.dia, 0);
+        const sumPulse = group.items.reduce((acc, curr) => acc + curr.pulse, 0);
+
+        const avgSys = Math.round(sumSys / count);
+        const avgDia = Math.round(sumDia / count);
+        const avgPulse = Math.round(sumPulse / count);
+
+        return {
+          ...group,
+          count,
+          avgSys,
+          avgDia,
+          avgPulse,
+          category: getBPCategory(avgSys, avgDia)
+        };
+      });
+
+      // Sort chronological for chart, reverse for table
+      result.sort((a, b) => a.mondayDate - b.mondayDate);
+      return result;
+    }
+
+    // --- Render Functions ---
+    function renderOverviewStats() {
+      const statSys = document.getElementById('statSys');
+      const statDia = document.getElementById('statDia');
+      const statPulse = document.getElementById('statPulse');
+      const statCount = document.getElementById('statCount');
+      const statSysStatus = document.getElementById('statSysStatus');
+      const statDiaStatus = document.getElementById('statDiaStatus');
+
+      statCount.textContent = records.length;
+
+      if (records.length === 0) {
+        statSys.textContent = '--';
+        statDia.textContent = '--';
+        statPulse.textContent = '--';
+        statSysStatus.innerHTML = '尚無紀錄';
+        statDiaStatus.innerHTML = '尚無紀錄';
+        return;
+      }
+
+      // Recent 7 days logic
+      const now = new Date();
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7);
+
+      const recentItems = records.filter(r => new Date(r.date + 'T00:00:00') >= sevenDaysAgo);
+      const targetPool = recentItems.length > 0 ? recentItems : records.slice(0, 10);
+
+      const avgSys = Math.round(targetPool.reduce((acc, r) => acc + r.sys, 0) / targetPool.length);
+      const avgDia = Math.round(targetPool.reduce((acc, r) => acc + r.dia, 0) / targetPool.length);
+      const avgPulse = Math.round(targetPool.reduce((acc, r) => acc + r.pulse, 0) / targetPool.length);
+
+      statSys.textContent = avgSys;
+      statDia.textContent = avgDia;
+      statPulse.textContent = avgPulse;
+
+      const cat = getBPCategory(avgSys, avgDia);
+      statSysStatus.innerHTML = `<span class="inline-block w-2 h-2 rounded-full ${cat.badge}"></span> ${cat.label} (標準 &lt;120)`;
+      statDiaStatus.innerHTML = `<span class="inline-block w-2 h-2 rounded-full ${cat.badge}"></span> ${cat.label} (標準 &lt;80)`;
+    }
+
+    function renderRecordsTable(filterTerm = '') {
+      const tbody = document.getElementById('recordsTableBody');
+      tbody.innerHTML = '';
+
+      let filtered = [...records];
+      if (filterTerm.trim()) {
+        const term = filterTerm.trim().toLowerCase();
+        filtered = filtered.filter(r => 
+          r.date.includes(term) ||
+          r.period.toLowerCase().includes(term) ||
+          (r.note && r.note.toLowerCase().includes(term))
+        );
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">查無量測資料，請點擊上方表單新增。</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(item => {
+        const cat = getBPCategory(item.sys, item.dia);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/80 transition-colors';
+        tr.innerHTML = `
+          <td class="py-3 px-3 font-medium text-slate-800 whitespace-nowrap">
+            ${item.date} <span class="text-slate-400 text-[11px] ml-1">${item.time}</span>
+          </td>
+          <td class="py-3 px-2 whitespace-nowrap">
+            <span class="inline-block px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 font-medium">${item.period}</span>
+            <span class="text-[10px] text-slate-400 ml-0.5">(${item.arm || '左手'})</span>
+          </td>
+          <td class="py-3 px-2 text-center font-bold text-slate-800">${item.sys}</td>
+          <td class="py-3 px-2 text-center font-bold text-slate-800">${item.dia}</td>
+          <td class="py-3 px-2 text-center text-slate-600">${item.pulse}</td>
+          <td class="py-3 px-2 whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium border ${cat.color}">
+              ${cat.label}
+            </span>
+          </td>
+          <td class="py-3 px-3 text-slate-500 max-w-[140px] truncate" title="${item.note || ''}">
+            ${item.note || '<span class="text-slate-300">-</span>'}
+          </td>
+          <td class="py-3 px-2 text-center whitespace-nowrap">
+            <button onclick="requestDeleteRecord('${item.id}')" class="text-slate-400 hover:text-red-500 p-1 rounded transition" title="刪除本筆">
+              <i class="ph ph-trash text-sm"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderWeeklySection() {
+      const weeklyData = calculateWeeklyAverages(records);
+      const tableBody = document.getElementById('weeklyTableBody');
+      tableBody.innerHTML = '';
+
+      if (weeklyData.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">目前尚無足夠資料統計每週平均。</td></tr>`;
+      } else {
+        // Display newest week at the top in table
+        [...weeklyData].reverse().forEach(w => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50/80 transition-colors';
+          tr.innerHTML = `
+            <td class="py-3 px-3 font-medium text-slate-800">
+              <span class="font-bold">${w.label}</span>
+              <span class="text-slate-400 text-[11px] block">${w.range}</span>
+            </td>
+            <td class="py-3 px-3 text-center font-semibold text-slate-600">${w.count} 次</td>
+            <td class="py-3 px-3 text-center font-bold text-indigo-600">${w.avgSys} <span class="text-[10px] font-normal text-slate-400">mmHg</span></td>
+            <td class="py-3 px-3 text-center font-bold text-teal-600">${w.avgDia} <span class="text-[10px] font-normal text-slate-400">mmHg</span></td>
+            <td class="py-3 px-3 text-center text-slate-600">${w.avgPulse} bpm</td>
+            <td class="py-3 px-3 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${w.category.color}">
+                ${w.category.label}
+              </span>
+            </td>
+          `;
+          tableBody.appendChild(tr);
+        });
+      }
+
+      // Update Chart.js
+      updateWeeklyChart(weeklyData);
+    }
+
+    function updateWeeklyChart(weeklyData) {
+      const ctx = document.getElementById('weeklyChart').getContext('2d');
+      const labels = weeklyData.map(w => `${w.label}\n(${w.range})`);
+      const sysPoints = weeklyData.map(w => w.avgSys);
+      const diaPoints = weeklyData.map(w => w.avgDia);
+      const pulsePoints = weeklyData.map(w => w.avgPulse);
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '週平均收縮壓 (高壓)',
+              data: sysPoints,
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              tension: 0.3,
+              fill: true,
+              borderWidth: 2.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: '#6366f1'
+            },
+            {
+              label: '週平均舒張壓 (低壓)',
+              data: diaPoints,
+              borderColor: '#14b8a6',
+              backgroundColor: 'rgba(20, 184, 166, 0.08)',
+              tension: 0.3,
+              fill: true,
+              borderWidth: 2.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: '#14b8a6'
+            },
+            {
+              label: '週平均脈搏',
+              data: pulsePoints,
+              borderColor: '#f59e0b',
+              borderDash: [4, 4],
+              borderWidth: 1.5,
+              pointRadius: 3,
+              tension: 0.3,
+              fill: false,
+              pointBackgroundColor: '#f59e0b'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              display: false // We already have a clean custom header
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              titleFont: { size: 12 },
+              bodyFont: { size: 12 },
+              padding: 10,
+              cornerRadius: 8
+            }
+          },
+          scales: {
+            y: {
+              min: 40,
+              max: 180,
+              grid: {
+                color: '#f1f5f9'
+              },
+              ticks: {
+                stepSize: 20,
+                font: { size: 10, color: '#94a3b8' }
+              }
+            },
+            x: {
+              grid: { display: false },
+              ticks: {
+                font: { size: 10, color: '#94a3b8' }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // --- Data Persistence ---
+    function saveToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      } catch (err) {
+        console.warn('LocalStorage save failed:', err);
+      }
+    }
+
+    function loadFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          records = JSON.parse(raw);
+        } else {
+          // Initialize empty
+          records = [];
+        }
+      } catch (err) {
+        records = [];
+      }
+      // Sort records by Date & Time descending (newest first)
+      sortRecords();
+    }
+
+    function sortRecords() {
+      records.sort((a, b) => {
+        const timeA = new Date(`${a.date}T${a.time || '00:00'}`);
+        const timeB = new Date(`${b.date}T${b.time || '00:00'}`);
+        return timeB - timeA;
+      });
+    }
+
+    // --- Modal Handling ---
+    const confirmModal = document.getElementById('confirmModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDesc = document.getElementById('modalDesc');
+    let modalAction = null;
+
+    function openModal(title, desc, onConfirm) {
+      modalTitle.textContent = title;
+      modalDesc.textContent = desc;
+      modalAction = onConfirm;
+      confirmModal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      confirmModal.classList.add('hidden');
+      modalAction = null;
+    }
+
+    document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+    document.getElementById('modalConfirmBtn').addEventListener('click', () => {
+      if (modalAction) modalAction();
+      closeModal();
+    });
+
+    window.requestDeleteRecord = function(id) {
+      openModal('刪除單筆紀錄', '確定要移除這筆測量數據嗎？', () => {
+        records = records.filter(r => r.id !== id);
+        saveToStorage();
+        refreshAllViews();
+        showToast('紀錄已刪除', 'info');
+      });
+    };
+
+    // Refresh UI
+    function refreshAllViews() {
+      renderOverviewStats();
+      renderWeeklySection();
+      renderRecordsTable(document.getElementById('searchInput').value);
+    }
+
+    // --- Setup Inputs & Default Values ---
+    function initDefaults() {
+      const now = new Date();
+      const pad = (n) => n.toString().padStart(2, '0');
+      document.getElementById('inputDate').value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      document.getElementById('inputTime').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+      // Set default period based on current hour
+      const hour = now.getHours();
+      const periodSelect = document.getElementById('inputPeriod');
+      if (hour >= 5 && hour < 11) periodSelect.value = '晨起';
+      else if (hour >= 11 && hour < 18) periodSelect.value = '傍晚';
+      else if (hour >= 18 || hour < 2) periodSelect.value = '睡前';
+      else periodSelect.value = '其他';
+    }
+
+    // --- Event Listeners ---
+    document.addEventListener('DOMContentLoaded', () => {
+      initDefaults();
+      loadFromStorage();
+      refreshAllViews();
+
+      // Form submission
+      document.getElementById('recordForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const date = document.getElementById('inputDate').value;
+        const time = document.getElementById('inputTime').value;
+        const period = document.getElementById('inputPeriod').value;
+        const arm = document.getElementById('inputArm').value;
+        const sys = parseInt(document.getElementById('inputSys').value, 10);
+        const dia = parseInt(document.getElementById('inputDia').value, 10);
+        const pulse = parseInt(document.getElementById('inputPulse').value, 10);
+        const note = document.getElementById('inputNote').value.trim();
+
+        if (dia >= sys) {
+          showToast('收縮壓 (高壓) 應高於舒張壓 (低壓)，請確認數值', 'error');
+          return;
+        }
+
+        const newEntry = {
+          id: 'rec_' + Date.now(),
+          date,
+          time,
+          period,
+          arm,
+          sys,
+          dia,
+          pulse,
+          note
+        };
+
+        records.unshift(newEntry);
+        sortRecords();
+        saveToStorage();
+        refreshAllViews();
+
+        // Clear notes & numbers
+        document.getElementById('inputSys').value = '';
+        document.getElementById('inputDia').value = '';
+        document.getElementById('inputPulse').value = '';
+        document.getElementById('inputNote').value = '';
+
+        showToast('血壓紀錄儲存成功！', 'success');
+      });
+
+      // Search Filter
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        renderRecordsTable(e.target.value);
+      });
+
+      // Clear All
+      document.getElementById('clearAllBtn').addEventListener('click', () => {
+        if (records.length === 0) return;
+        openModal('清空所有歷史紀錄', '這將會清除您所有的血壓儲存數據，無法復原。', () => {
+          records = [];
+          saveToStorage();
+          refreshAllViews();
+          showToast('所有歷史紀錄已清空', 'info');
+        });
+      });
+
+      // CSV Export
+      document.getElementById('exportBtn').addEventListener('click', () => {
+        if (records.length === 0) {
+          showToast('目前尚無任何紀錄可匯出', 'info');
+          return;
+        }
+        let csvContent = '\uFEFF日期,時間,時段,手臂,收縮壓(高壓),舒張壓(低壓),脈搏,備註\n';
+        records.forEach(r => {
+          const row = [
+            r.date,
+            r.time,
+            r.period,
+            r.arm || '左手',
+            r.sys,
+            r.dia,
+            r.pulse,
+            `"${(r.note || '').replace(/"/g, '""')}"`
+          ];
+          csvContent += row.join(',') + '\n';
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `血壓健康紀錄_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('已成功匯出 CSV 檔案', 'success');
+      });
+
+      // CSV Import
+      const fileInput = document.getElementById('csvFileInput');
+      document.getElementById('importBtnTrigger').addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          try {
+            const content = evt.target.result;
+            const lines = content.split(/\r?\n/).filter(line => line.trim());
+            if (lines.length <= 1) {
+              showToast('CSV 檔案內容為空或無有效資料', 'error');
+              return;
+            }
+
+            let addedCount = 0;
+            // Skip header (i=1)
+            for (let i = 1; i < lines.length; i++) {
+              const parts = lines[i].split(',');
+              if (parts.length >= 7) {
+                const date = parts[0].trim();
+                const time = parts[1].trim();
+                const period = parts[2].trim() || '其他';
+                const arm = parts[3].trim() || '左手';
+                const sys = parseInt(parts[4], 10);
+                const dia = parseInt(parts[5], 10);
+                const pulse = parseInt(parts[6], 10);
+                const note = parts[7] ? parts.slice(7).join(',').replace(/^"|"$/g, '').trim() : '';
+
+                if (date && !isNaN(sys) && !isNaN(dia) && !isNaN(pulse)) {
+                  records.push({
+                    id: 'import_' + Date.now() + '_' + i,
+                    date,
+                    time: time || '08:00',
+                    period,
+                    arm,
+                    sys,
+                    dia,
+                    pulse,
+                    note
+                  });
+                  addedCount++;
+                }
+              }
+            }
+
+            if (addedCount > 0) {
+              sortRecords();
+              saveToStorage();
+              refreshAllViews();
+              showToast(`成功匯入 ${addedCount} 筆血壓資料！`, 'success');
+            } else {
+              showToast('未能識別相容的血壓欄位格式', 'error');
+            }
+          } catch (err) {
+            showToast('檔案解析錯誤，請確認 CSV 格式', 'error');
+          }
+          fileInput.value = '';
+        };
+        reader.readAsText(file, 'UTF-8');
+      });
+    });
+  </script>
+</body>
+</html>

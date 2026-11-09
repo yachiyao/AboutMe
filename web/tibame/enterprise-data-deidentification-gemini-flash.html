@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>企業資料去識別化工具</title>
+  <!-- SheetJS CDN for reading and exporting multi-sheet Excel & CSV files -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Phosphor Icons for crisp enterprise UI icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-surface: #111827;
+      --bg-card: #1f2937;
+      --bg-card-hover: #283548;
+      --border-color: #374151;
+      --border-focus: #3b82f6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: rgba(37, 99, 235, 0.15);
+      --success: #10b981;
+      --success-hover: #059669;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #8b5cf6;
+      --badge-bg: #1e293b;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
+      --radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* Header */
+    header {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand-container {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .brand-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+
+    .brand-badge {
+      font-size: 0.72rem;
+      background: var(--primary-light);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .author-credit {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 4px;
+      opacity: 0.85;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.4);
+    }
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-card);
+      border-color: var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      background-color: var(--bg-card-hover);
+      border-color: #4b5563;
+    }
+
+    .btn-success {
+      background-color: var(--success);
+      color: white;
+    }
+    .btn-success:hover {
+      background-color: var(--success-hover);
+    }
+
+    .btn-outline-warning {
+      background-color: transparent;
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+    .btn-outline-warning:hover {
+      background-color: rgba(245, 158, 11, 0.1);
+      border-color: var(--warning);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      padding: 24px;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Privacy Banner */
+    .privacy-notice {
+      background: linear-gradient(90deg, rgba(30, 58, 138, 0.3) 0%, rgba(17, 24, 39, 0.6) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+    }
+
+    .privacy-notice i {
+      font-size: 1.25rem;
+      color: #60a5fa;
+    }
+
+    /* Upload & Action Card */
+    .dropzone-container {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .dropzone-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .dropzone {
+      border: 2px dashed var(--border-color);
+      background-color: rgba(17, 24, 39, 0.7);
+      border-radius: var(--radius);
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .dropzone:hover, .dropzone.drag-active {
+      border-color: var(--primary);
+      background-color: rgba(37, 99, 235, 0.05);
+    }
+
+    .dropzone-icon {
+      font-size: 2.8rem;
+      color: #60a5fa;
+    }
+
+    .dropzone-text {
+      font-weight: 500;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+    }
+
+    .dropzone-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quick-actions-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .quick-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Step / Section Container */
+    .app-section {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-header {
+      padding: 14px 20px;
+      background-color: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Tabs */
+    .tabs-bar {
+      display: flex;
+      gap: 6px;
+      background-color: #0d131f;
+      padding: 6px 14px;
+      border-bottom: 1px solid var(--border-color);
+      overflow-x: auto;
+    }
+
+    .tab-item {
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-item:hover {
+      color: var(--text-main);
+      background-color: var(--bg-card);
+    }
+
+    .tab-item.active {
+      color: #fff;
+      background-color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Columns Config Table */
+    .table-container {
+      overflow-x: auto;
+      max-height: 480px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    th {
+      background-color: #131d2e;
+      color: #94a3b8;
+      font-weight: 600;
+      padding: 10px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 2px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-color);
+      color: #e2e8f0;
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Form Controls Inside Table */
+    select, input[type="text"], input[type="number"] {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+      width: 100%;
+      max-width: 220px;
+    }
+
+    select:focus, input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Type Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-name { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-id { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-phone { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-email { background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-financial { background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-general { background: rgba(107, 114, 128, 0.2); color: #d1d5db; border: 1px solid rgba(107, 114, 128, 0.4); }
+
+    .sample-preview {
+      font-family: monospace;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Preview Comparison Split View */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background-color: var(--border-color);
+      border-top: 1px solid var(--border-color);
+    }
+
+    @media (max-width: 1024px) {
+      .preview-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .preview-pane {
+      background-color: var(--bg-surface);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .pane-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .table-sub-container {
+      max-height: 380px;
+      overflow: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+    }
+
+    .mono-cell {
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+
+    .changed-cell {
+      background-color: rgba(59, 130, 246, 0.12) !important;
+      color: #93c5fd;
+      font-weight: 500;
+    }
+
+    /* Modal / Message Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-lg);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.875rem;
+      z-index: 100;
+      transform: translateY(120%);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    #toast.toast-success { border-left: 4px solid var(--success); }
+    #toast.toast-error { border-left: 4px solid var(--danger); }
+    #toast.toast-info { border-left: 4px solid var(--primary); }
+
+    /* Empty state */
+    .empty-placeholder {
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .empty-placeholder i {
+      font-size: 3rem;
+      opacity: 0.4;
+    }
+
+    /* Global Mapping Ledger Modal */
+    .ledger-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(3px);
+      z-index: 99;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .ledger-modal {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 900px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .modal-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-body {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-foot {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand-container">
+      <div class="brand-title">
+        <i class="ph-bold ph-shield-check" style="color: #60a5fa; font-size: 1.6rem;"></i>
+        <span>企業資料去識別化工具</span>
+      </div>
+      <span class="brand-badge">Client-Side Engine</span>
+      <span class="author-credit">Builded by Cassell</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-outline-warning" id="loadDemoBtn" title="一鍵載入含有多工作表的企業模擬業務測試數據">
+        <i class="ph-bold ph-lightning"></i>
+        <span>載入測試範例資料</span>
+      </button>
+      <button class="btn btn-secondary" id="openLedgerBtn" disabled>
+        <i class="ph ph-notebook"></i>
+        <span>查看對照表記錄</span>
+      </button>
+      <button class="btn btn-success" id="exportDataBtn" disabled>
+        <i class="ph-bold ph-download-simple"></i>
+        <span>匯出脫敏檔案</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Space -->
+  <main>
+    <!-- Privacy Assurance Strip -->
+    <div class="privacy-notice">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <i class="ph-fill ph-lock-key"></i>
+        <div>
+          <strong>零資料外洩承諾：</strong>
+          所有運算、規則辨識、亂數微擾與對照表生成皆在您的本機瀏覽器 JavaScript 執行，檔案絕不會上傳至任何遠端伺服器。
+        </div>
+      </div>
+      <div style="font-size: 0.75rem; color: #94a3b8; white-space: nowrap;">
+        符合 GDPR / 台灣個人資料保護法 / 營業秘密保護準則
+      </div>
+    </div>
+
+    <!-- Upload and Fast Setting Area -->
+    <div class="dropzone-container">
+      <div class="dropzone" id="dropArea">
+        <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+        <i class="ph ph-file-arrow-up dropzone-icon"></i>
+        <div class="dropzone-text">點擊上傳或將 Excel (.xlsx, .xls) / CSV 拖曳至此</div>
+        <div class="dropzone-sub">支援同時包含多個工作表 (Multi-Sheet) 的大型活頁簿</div>
+      </div>
+
+      <div class="quick-actions-card">
+        <div class="quick-title">
+          <i class="ph-bold ph-sliders-horizontal" style="color: #60a5fa;"></i>
+          <span>全域脫敏設定 (關聯一致性保證)</span>
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-muted);">
+          系統將全自動分析各欄位類型（姓名、身分證、手機、Email、財務營收、成本等），並透過全域雜湊字典維持<strong>跨工作表資料關聯一致性</strong>。
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: auto;">
+          <button class="btn btn-primary" id="autoDetectAllBtn" style="flex: 1;" disabled>
+            <i class="ph-bold ph-magic-wand"></i>
+            <span>重新自動探測敏感欄位</span>
+          </button>
+          <button class="btn btn-secondary" id="applyAllBtn" style="flex: 1;" disabled>
+            <i class="ph-bold ph-play"></i>
+            <span>即時執行脫敏運算</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi-sheet Navigation Tabs -->
+    <div class="app-section" id="workspaceSection" style="display: none;">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="ph ph-table" style="color: #60a5fa;"></i>
+          <span>工作表選擇與欄位脫敏策略配置</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);" id="datasetMeta">
+          檔案：未載入
+        </div>
+      </div>
+
+      <!-- Sheet Tabs -->
+      <div class="tabs-bar" id="sheetTabs">
+        <!-- Injected via JS -->
+      </div>
+
+      <!-- Column Config Table -->
+      <div class="table-container">
+        <table id="configTable">
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>欄位名稱</th>
+              <th>自動偵測型態</th>
+              <th>去識別化 / 脫敏策略</th>
+              <th>策略參數設定</th>
+              <th>原始資料範例</th>
+            </tr>
+          </thead>
+          <tbody id="configTableBody">
+            <!-- Dynamic Columns -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Live Preview Split Comparison -->
+    <div class="app-section" id="previewSection" style="display: none;">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="ph-bold ph-eye" style="color: #10b981;"></i>
+          <span>脫敏結果對照預覽 (前 8 筆記錄)</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <span style="font-size: 0.75rem; color: #94a3b8;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: #60a5fa; border-radius: 2px; margin-right: 4px;"></span>
+            藍底欄位代表已脫敏修改
+          </span>
+        </div>
+      </div>
+
+      <div class="preview-grid">
+        <!-- Original Data Box -->
+        <div class="preview-pane">
+          <div class="pane-title" style="color: #94a3b8;">
+            <i class="ph-bold ph-file-text"></i>
+            <span>原始資料 (Original)</span>
+          </div>
+          <div class="table-sub-container" id="origPreviewContainer">
+            <!-- Table inserted via JS -->
+          </div>
+        </div>
+
+        <!-- Anonymized Data Box -->
+        <div class="preview-pane" style="background-color: #0d1424;">
+          <div class="pane-title" style="color: #6ee7b7;">
+            <i class="ph-bold ph-lock-key"></i>
+            <span>已去識別化資料 (De-identified)</span>
+          </div>
+          <div class="table-sub-container" id="anonPreviewContainer">
+            <!-- Table inserted via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty Guidance Box -->
+    <div class="app-section" id="emptyPlaceholder">
+      <div class="empty-placeholder">
+        <i class="ph ph-folder-open"></i>
+        <h3 style="color: #e2e8f0; font-weight: 500;">目前尚未載入任何資料檔案</h3>
+        <p style="max-width: 500px; font-size: 0.85rem;">
+          您可以點擊上方<strong>「載入測試範例資料」</strong>快速體驗完整功能，或拖放企業實際的 Excel (.xlsx) / CSV 報表進行本機端高隱私脫敏。
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Global Ledger / Mapping Modal -->
+  <div class="ledger-modal-backdrop" id="ledgerModalBackdrop">
+    <div class="ledger-modal">
+      <div class="modal-head">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <i class="ph-bold ph-book-bookmark" style="color: #60a5fa; font-size: 1.3rem;"></i>
+          <h3 style="font-size: 1.1rem; color: #fff;">假名化全域對照表 (Relational Key Mapping)</h3>
+        </div>
+        <button class="btn btn-secondary" style="padding: 4px 8px;" id="closeLedgerBtn">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+          系統使用一致性索引雜湊，確保同一原始值（例如同一個客戶身分證、供應商統編、員工名稱）在不同工作表出現時，轉換出的假名均完全一致，可完整保留關聯性分析能力。
+        </p>
+        <div class="table-container" style="max-height: 400px; border: 1px solid var(--border-color); border-radius: 6px;">
+          <table>
+            <thead>
+              <tr>
+                <th>分類</th>
+                <th>原始值 (Original)</th>
+                <th>假名轉換值 (Pseudonym)</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerTableBody">
+              <!-- Injected dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-primary" id="exportLedgerBtn">
+          <i class="ph-bold ph-download-simple"></i>
+          <span>匯出獨立對照表 (Excel)</span>
+        </button>
+        <button class="btn btn-secondary" id="closeLedgerFootBtn">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast">
+    <i class="ph-bold ph-info" id="toastIcon"></i>
+    <span id="toastMsg">Notification message</span>
+  </div>
+
+  <!-- Client-Side Engine JavaScript -->
+  <script>
+    /**
+     * Local De-Identification Enterprise Engine
+     * Completely in-browser, zero external server transmission.
+     */
+
+    // --- State Storage ---
+    const AppState = {
+      fileName: '',
+      workbook: null,       // Original SheetJS workbook
+      sheetNames: [],
+      currentSheet: '',
+      rawSheetData: {},     // { [sheetName]: Array of Objects }
+      processedData: {},    // { [sheetName]: Array of Objects }
+      sheetRules: {},       // { [sheetName]: { [columnName]: { type, method, param } } }
+      // Global pseudonym mappings to retain consistency across multiple sheets
+      globalLedger: {
+        names: new Map(),
+        ids: new Map(),
+        phones: new Map(),
+        emails: new Map(),
+        addresses: new Map(),
+        companies: new Map(),
+        general: new Map()
+      }
+    };
+
+    // --- High Realism Synthesizer Dictionaries (Taiwan/Chinese Enterprise Context) ---
+    const SURNAMES = ['陳', '林', '黃', '張', '李', '王', '吳', '劉', '蔡', '楊', '許', '鄭', '謝', '洪', '郭', '邱', '曾', '廖', '賴', '徐', '周', '葉', '蘇', '莊', '江'];
+    const GIVEN_NAMES = ['冠宇', '家豪', '雅婷', '宗翰', '詩涵', '志豪', '品言', '宇軒', '怡君', '子揚', '雅惠', '佳蓉', '彥廷', '承翰', '柏翰', '宜芳', '心怡', '建宏', '俊傑', '欣妤'];
+    const ROAD_NAMES = ['中正路', '中山路', '敦化南路', '信義路', '八德路', '南京東路', '民生東路', '文心路', '博愛街', '光復路', '重慶南路'];
+    const CITIES = ['台北市', '新北市', '桃園市', '台中市', '台南市', '高雄市', '新竹市'];
+    const COMPANY_PREFIX = ['宏達', '華碩', '聯發', '台塑', '永豐', '富邦', '國泰', '鼎新', '智冠', '瑞昱', '日月', '統一'];
+    const COMPANY_SUFFIX = ['科技', '資訊', '企業', '工業', '實業', '物流', '商務', '顧問'];
+
+    // --- Seeded Consistent Pseudo-Random Generator ---
+    function hashString(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0; // Convert to 32bit integer
+      }
+      return Math.abs(hash);
+    }
+
+    // --- Sensitives Detectors ---
+    function detectColumnType(colName, sampleValues) {
+      const lower = colName.toLowerCase();
+      
+      // 1. Identification / SSN / TW National ID
+      if (lower.includes('id') || lower.includes('身分證') || lower.includes('證號') || lower.includes('統編') || lower.includes('tax')) {
+        return 'ID';
+      }
+
+      // 2. Personal Names
+      if (lower.includes('name') || lower.includes('姓名') || lower.includes('聯絡人') || lower.includes('負責人') || lower.includes('員工')) {
+        return 'NAME';
+      }
+
+      // 3. Phone Numbers
+      if (lower.includes('phone') || lower.includes('tel') || lower.includes('手機') || lower.includes('電話') || lower.includes('行動')) {
+        return 'PHONE';
+      }
+
+      // 4. Email
+      if (lower.includes('email') || lower.includes('mail') || lower.includes('信箱')) {
+        return 'EMAIL';
+      }
+
+      // 5. Financial / Business Secret / Amounts
+      if (lower.includes('salary') || lower.includes('薪資') || lower.includes('金額') || lower.includes('amount') ||
+          lower.includes('revenue') || lower.includes('營收') || lower.includes('cost') || lower.includes('成本') ||
+          lower.includes('利潤') || lower.includes('profit') || lower.includes('price') || lower.includes('單價') ||
+          lower.includes('總計') || lower.includes('total') || lower.includes('餘額') || lower.includes('balance')) {
+        return 'FINANCIAL';
+      }
+
+      // 6. Address
+      if (lower.includes('addr') || lower.includes('地址') || lower.includes('住址')) {
+        return 'ADDRESS';
+      }
+
+      // Value inspection fallback
+      const nonNullSamples = sampleValues.filter(v => v !== null && v !== undefined && String(v).trim() !== '').map(String);
+      if (nonNullSamples.length > 0) {
+        // Regex checking
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^09\d{2}-?\d{3}-?\d{3}$/;
+        const twIdRegex = /^[A-Z][12]\d{8}$/;
+
+        if (nonNullSamples.some(v => emailRegex.test(v))) return 'EMAIL';
+        if (nonNullSamples.some(v => phoneRegex.test(v.replace(/[\s-]/g, '')))) return 'PHONE';
+        if (nonNullSamples.some(v => twIdRegex.test(v))) return 'ID';
+        
+        // Pure high financial digits
+        const numericCount = nonNullSamples.filter(v => !isNaN(parseFloat(v)) && isFinite(v)).length;
+        if (numericCount / nonNullSamples.length > 0.8) {
+          const maxVal = Math.max(...nonNullSamples.map(v => parseFloat(v)).filter(v => !isNaN(v)));
+          if (maxVal > 1000) return 'FINANCIAL';
+        }
+      }
+
+      return 'GENERAL';
+    }
+
+    // Default processing method suggestion based on detected type
+    function getDefaultMethodForType(type) {
+      switch(type) {
+        case 'NAME': return 'PSEUDONYM';
+        case 'ID': return 'MASK';
+        case 'PHONE': return 'MASK';
+        case 'EMAIL': return 'MASK';
+        case 'FINANCIAL': return 'SCALE'; // 等比例縮放
+        case 'ADDRESS': return 'GENERALIZE';
+        default: return 'NONE';
+      }
+    }
+
+    // --- De-Identification Algorithms (Deterministic & Relational) ---
+    function generateConsistentPseudonym(val, category) {
+      if (val === null || val === undefined || String(val).trim() === '') return val;
+      const strVal = String(val).trim();
+      const ledger = AppState.globalLedger[category] || AppState.globalLedger.general;
+
+      if (ledger.has(strVal)) {
+        return ledger.get(strVal);
+      }
+
+      const seed = hashString(strVal);
+      let result = '';
+
+      if (category === 'names') {
+        const surname = SURNAMES[seed % SURNAMES.length];
+        const given = GIVEN_NAMES[(seed >> 3) % GIVEN_NAMES.length];
+        result = `${surname}${given}`;
+      } else if (category === 'companies') {
+        const pref = COMPANY_PREFIX[seed % COMPANY_PREFIX.length];
+        const suff = COMPANY_SUFFIX[(seed >> 2) % COMPANY_SUFFIX.length];
+        result = `${pref}${suff}股份有限公司`;
+      } else if (category === 'ids') {
+        const letters = "ABCDEFGHJKLMNPQRSTUVXYWZIO";
+        const letter = letters[seed % letters.length];
+        const gender = (seed % 2) + 1;
+        const rest = String((seed * 9301 + 49297) % 10000000).padStart(7, '0');
+        result = `${letter}${gender}${rest}`;
+      } else if (category === 'emails') {
+        const domains = ['enterprise-demo.com', 'client-secure.org', 'corp-partner.tw', 'anondata.net'];
+        const domain = domains[seed % domains.length];
+        result = `user_${(seed % 8999) + 1000}@${domain}`;
+      } else {
+        result = `PS-${(seed % 899999) + 100000}`;
+      }
+
+      ledger.set(strVal, result);
+      return result;
+    }
+
+    // Transformation Executor
+    function applyDeIdentification(val, method, param, type) {
+      if (val === null || val === undefined || String(val).trim() === '') return val;
+      const strVal = String(val).trim();
+
+      switch (method) {
+        case 'NONE':
+          return val;
+
+        case 'PSEUDONYM': {
+          if (type === 'NAME') return generateConsistentPseudonym(strVal, 'names');
+          if (type === 'ID') return generateConsistentPseudonym(strVal, 'ids');
+          if (type === 'EMAIL') return generateConsistentPseudonym(strVal, 'emails');
+          return generateConsistentPseudonym(strVal, 'general');
+        }
+
+        case 'MASK': {
+          // Custom masking rules
+          if (type === 'NAME') {
+            if (strVal.length <= 2) return strVal[0] + '○';
+            return strVal[0] + '○' + strVal.slice(2);
+          }
+          if (type === 'PHONE') {
+            const clean = strVal.replace(/\D/g, '');
+            if (clean.length === 10) {
+              return clean.slice(0, 4) + '***' + clean.slice(7);
+            }
+            return strVal.slice(0, 3) + '****' + strVal.slice(-3);
+          }
+          if (type === 'EMAIL') {
+            const parts = strVal.split('@');
+            if (parts.length === 2) {
+              const namePart = parts[0];
+              const maskedName = namePart.length <= 2 ? namePart[0] + '*' : namePart.slice(0, 2) + '***';
+              return `${maskedName}@${parts[1]}`;
+            }
+            return '***@***.com';
+          }
+          if (type === 'ID') {
+            if (strVal.length === 10) {
+              return strVal.slice(0, 3) + '****' + strVal.slice(7);
+            }
+            return strVal.slice(0, 2) + '****' + strVal.slice(-2);
+          }
+          // Default masking: retain 20% head and tail
+          const len = strVal.length;
+          if (len <= 2) return '**';
+          const edge = Math.max(1, Math.floor(len / 4));
+          return strVal.slice(0, edge) + '*'.repeat(len - edge * 2) + strVal.slice(len - edge);
+        }
+
+        case 'GENERALIZE': {
+          // 泛化：金額級距、地址到縣市、年齡區間
+          const num = parseFloat(strVal.replace(/,/g, ''));
+          if (!isNaN(num)) {
+            const step = parseFloat(param) || 10000;
+            const floorVal = Math.floor(num / step) * step;
+            const ceilVal = floorVal + step;
+            return `${floorVal.toLocaleString()} ~ ${ceilVal.toLocaleString()}`;
+          }
+          // Address generalization
+          for (const city of CITIES) {
+            if (strVal.includes(city)) return `${city}某區`;
+          }
+          return strVal.slice(0, 3) + '...';
+        }
+
+        case 'SCALE': {
+          // 等比例縮放 (Ratio Scaling for Financial Consistency)
+          const num = parseFloat(strVal.replace(/,/g, ''));
+          if (isNaN(num)) return val;
+          const ratio = parseFloat(param) || 0.85;
+          return Math.round(num * ratio * 100) / 100;
+        }
+
+        case 'PERTURB': {
+          // 數值微擾 (+/- X% Random Noise)
+          const num = parseFloat(strVal.replace(/,/g, ''));
+          if (isNaN(num)) return val;
+          const range = (parseFloat(param) || 5) / 100; // e.g., 5%
+          // Deterministic noise using val hash so relation holds across occurrences
+          const seed = hashString(strVal);
+          const noiseFraction = ((seed % 2000) / 1000 - 1) * range; // [-range, +range]
+          return Math.round((num * (1 + noiseFraction)) * 100) / 100;
+        }
+
+        case 'SUPPRESS': {
+          // 完全抹除
+          return '[REDACTED]';
+        }
+
+        default:
+          return val;
+      }
+    }
+
+    // --- UI Interactions & Render Logic ---
+
+    // Toast helper
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toastMsg');
+      const icon = document.getElementById('toastIcon');
+
+      msg.textContent = message;
+      toast.className = `show toast-${type}`;
+
+      if (type === 'success') icon.className = 'ph-bold ph-check-circle';
+      else if (type === 'error') icon.className = 'ph-bold ph-warning-circle';
+      else icon.className = 'ph-bold ph-info';
+
+      setTimeout(() => {
+        toast.className = '';
+      }, 3500);
+    }
+
+    // Populate the Sheet Tabs
+    function renderTabs() {
+      const container = document.getElementById('sheetTabs');
+      container.innerHTML = '';
+
+      AppState.sheetNames.forEach(sheetName => {
+        const tab = document.createElement('div');
+        tab.className = `tab-item ${sheetName === AppState.currentSheet ? 'active' : ''}`;
+        tab.innerHTML = `<i class="ph ph-file-spreadsheet"></i> <span>${sheetName}</span> (${AppState.rawSheetData[sheetName].length} 筆)`;
+        tab.addEventListener('click', () => {
+          AppState.currentSheet = sheetName;
+          renderTabs();
+          renderConfigTable();
+          executeDeIdentification();
+        });
+        container.appendChild(tab);
+      });
+    }
+
+    // Populate Column Settings Table for the active sheet
+    function renderConfigTable() {
+      const tbody = document.getElementById('configTableBody');
+      tbody.innerHTML = '';
+
+      const currentSheet = AppState.currentSheet;
+      const rows = AppState.rawSheetData[currentSheet] || [];
+      if (rows.length === 0) return;
+
+      const columns = Object.keys(rows[0] || {});
+      const rules = AppState.sheetRules[currentSheet];
+
+      columns.forEach((col, idx) => {
+        const rule = rules[col];
+        const tr = document.createElement('tr');
+
+        // Extract 3 sample values
+        const sampleValues = rows.slice(0, 3).map(r => r[col] ?? '');
+        const samplePreviewStr = sampleValues.filter(Boolean).join(' | ');
+
+        let badgeClass = 'badge-general';
+        let badgeLabel = '一般資料';
+        if (rule.type === 'NAME') { badgeClass = 'badge-name'; badgeLabel = '個人姓名'; }
+        else if (rule.type === 'ID') { badgeClass = 'badge-id'; badgeLabel = '身分證 / 統編'; }
+        else if (rule.type === 'PHONE') { badgeClass = 'badge-phone'; badgeLabel = '電話 / 手機'; }
+        else if (rule.type === 'EMAIL') { badgeClass = 'badge-email'; badgeLabel = '電子郵件'; }
+        else if (rule.type === 'FINANCIAL') { badgeClass = 'badge-financial'; badgeLabel = '財務金額 / 機密'; }
+        else if (rule.type === 'ADDRESS') { badgeClass = 'badge-id'; badgeLabel = '地址資訊'; }
+
+        tr.innerHTML = `
+          <td><span style="color: #64748b; font-family: monospace;">${idx + 1}</span></td>
+          <td style="font-weight: 600; color: #f1f5f9;">${col}</td>
+          <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+          <td>
+            <select class="rule-method-select" data-col="${col}">
+              <option value="NONE" ${rule.method === 'NONE' ? 'selected' : ''}>維持原樣 (無處理)</option>
+              <option value="PSEUDONYM" ${rule.method === 'PSEUDONYM' ? 'selected' : ''}>假名替換 (Pseudonymization)</option>
+              <option value="MASK" ${rule.method === 'MASK' ? 'selected' : ''}>局部遮罩 (Masking: 林○華, 0912***)</option>
+              <option value="GENERALIZE" ${rule.method === 'GENERALIZE' ? 'selected' : ''}>泛化區間 (Generalization: 級距)</option>
+              <option value="SCALE" ${rule.method === 'SCALE' ? 'selected' : ''}>等比例縮放 (Ratio Scaling)</option>
+              <option value="PERTURB" ${rule.method === 'PERTURB' ? 'selected' : ''}>數值微擾 (Noise Perturbation)</option>
+              <option value="SUPPRESS" ${rule.method === 'SUPPRESS' ? 'selected' : ''}>完全抹除 (Suppression: [REDACTED])</option>
+            </select>
+          </td>
+          <td>
+            <div class="param-box" id="paramBox_${idx}">
+              ${renderParamInput(col, rule)}
+            </div>
+          </td>
+          <td>
+            <div class="sample-preview" title="${samplePreviewStr}">${samplePreviewStr || '<span style="color:#64748b">(空值)</span>'}</div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Bind Change Handlers
+      document.querySelectorAll('.rule-method-select').forEach(select => {
+        select.addEventListener('change', (e) => {
+          const colName = e.target.getAttribute('data-col');
+          const method = e.target.value;
+          AppState.sheetRules[currentSheet][colName].method = method;
+          renderConfigTable();
+          executeDeIdentification();
+        });
+      });
+
+      document.querySelectorAll('.rule-param-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const colName = e.target.getAttribute('data-col');
+          AppState.sheetRules[currentSheet][colName].param = e.target.value;
+          executeDeIdentification();
+        });
+      });
+    }
+
+    function renderParamInput(colName, rule) {
+      if (rule.method === 'SCALE') {
+        return `<div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:0.75rem; color:#9ca3af;">比例:</span>
+                  <input type="number" step="0.05" class="rule-param-input" data-col="${colName}" value="${rule.param || 0.85}" style="width:90px;">
+                </div>`;
+      }
+      if (rule.method === 'PERTURB') {
+        return `<div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:0.75rem; color:#9ca3af;">微擾±%:</span>
+                  <input type="number" step="1" class="rule-param-input" data-col="${colName}" value="${rule.param || 5}" style="width:80px;">
+                </div>`;
+      }
+      if (rule.method === 'GENERALIZE') {
+        return `<div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:0.75rem; color:#9ca3af;">級距跨度:</span>
+                  <input type="number" step="1000" class="rule-param-input" data-col="${colName}" value="${rule.param || 20000}" style="width:110px;">
+                </div>`;
+      }
+      return `<span style="color:#64748b; font-size:0.75rem;">無須額外參數</span>`;
+    }
+
+    // Run Transformation Across All Sheets
+    function executeDeIdentification() {
+      AppState.sheetNames.forEach(sheetName => {
+        const rawRows = AppState.rawSheetData[sheetName] || [];
+        const rules = AppState.sheetRules[sheetName];
+        
+        AppState.processedData[sheetName] = rawRows.map(row => {
+          const newRow = {};
+          for (const [col, val] of Object.entries(row)) {
+            const rule = rules[col];
+            if (!rule || rule.method === 'NONE') {
+              newRow[col] = val;
+            } else {
+              newRow[col] = applyDeIdentification(val, rule.method, rule.param, rule.type);
+            }
+          }
+          return newRow;
+        });
+      });
+
+      renderPreviews();
+      updateLedgerCount();
+    }
+
+    // Render Side-by-Side Comparison
+    function renderPreviews() {
+      const origContainer = document.getElementById('origPreviewContainer');
+      const anonContainer = document.getElementById('anonPreviewContainer');
+
+      const currentSheet = AppState.currentSheet;
+      const origData = AppState.rawSheetData[currentSheet] || [];
+      const anonData = AppState.processedData[currentSheet] || [];
+      const rules = AppState.sheetRules[currentSheet] || {};
+
+      if (origData.length === 0) {
+        origContainer.innerHTML = '<div style="padding:20px; color:#64748b;">無資料</div>';
+        anonContainer.innerHTML = '<div style="padding:20px; color:#64748b;">無資料</div>';
+        return;
+      }
+
+      const columns = Object.keys(origData[0]);
+      const previewRowsCount = Math.min(8, origData.length);
+
+      // Builder for comparison tables
+      const buildTable = (data, isAnon = false) => {
+        let html = '<table><thead><tr>';
+        columns.forEach(col => {
+          html += `<th>${col}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        for (let i = 0; i < previewRowsCount; i++) {
+          html += '<tr>';
+          columns.forEach(col => {
+            const isChanged = isAnon && rules[col] && rules[col].method !== 'NONE';
+            const cellClass = isChanged ? 'changed-cell mono-cell' : 'mono-cell';
+            const val = data[i] ? data[i][col] : '';
+            html += `<td class="${cellClass}">${val !== undefined && val !== null ? val : ''}</td>`;
+          });
+          html += '</tr>';
+        }
+        html += '</tbody></table>';
+        return html;
+      };
+
+      origContainer.innerHTML = buildTable(origData, false);
+      anonContainer.innerHTML = buildTable(anonData, true);
+    }
+
+    // Auto Detect All Sensitive Columns
+    function autoDetectColumns() {
+      AppState.sheetNames.forEach(sheetName => {
+        const rows = AppState.rawSheetData[sheetName] || [];
+        if (rows.length === 0) return;
+        const columns = Object.keys(rows[0]);
+
+        AppState.sheetRules[sheetName] = {};
+        columns.forEach(col => {
+          const sampleVals = rows.map(r => r[col]);
+          const type = detectColumnType(col, sampleVals);
+          const defaultMethod = getDefaultMethodForType(type);
+
+          let defaultParam = '';
+          if (defaultMethod === 'SCALE') defaultParam = '0.85';
+          if (defaultMethod === 'PERTURB') defaultParam = '5';
+          if (defaultMethod === 'GENERALIZE') defaultParam = '10000';
+
+          AppState.sheetRules[sheetName][col] = {
+            type: type,
+            method: defaultMethod,
+            param: defaultParam
+          };
+        });
+      });
+    }
+
+    // Initialize loaded workbook
+    function loadWorkbookData(wb, fileName) {
+      AppState.fileName = fileName;
+      AppState.workbook = wb;
+      AppState.sheetNames = wb.SheetNames;
+      AppState.currentSheet = wb.SheetNames[0];
+      AppState.rawSheetData = {};
+      AppState.processedData = {};
+      AppState.sheetRules = {};
+      
+      // Clear global ledger for fresh load
+      for (const k in AppState.globalLedger) {
+        AppState.globalLedger[k].clear();
+      }
+
+      // Convert sheets to JSON rows
+      AppState.sheetNames.forEach(sheetName => {
+        const worksheet = wb.Sheets[sheetName];
+        AppState.rawSheetData[sheetName] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      });
+
+      // Analyze and configure
+      autoDetectColumns();
+      executeDeIdentification();
+
+      // UI state transitions
+      document.getElementById('emptyPlaceholder').style.display = 'none';
+      document.getElementById('workspaceSection').style.display = 'flex';
+      document.getElementById('previewSection').style.display = 'flex';
+      document.getElementById('datasetMeta').textContent = `已載入：${fileName} (共 ${AppState.sheetNames.length} 個工作表)`;
+
+      document.getElementById('autoDetectAllBtn').disabled = false;
+      document.getElementById('applyAllBtn').disabled = false;
+      document.getElementById('openLedgerBtn').disabled = false;
+      document.getElementById('exportDataBtn').disabled = false;
+
+      renderTabs();
+      renderConfigTable();
+      showToast(`成功載入活頁簿，偵測到 ${AppState.sheetNames.length} 個工作表！`, 'success');
+    }
+
+    // File Drag & Drop & Input Binding
+    const dropArea = document.getElementById('dropArea');
+    const fileInput = document.getElementById('fileInput');
+
+    dropArea.addEventListener('click', () => fileInput.click());
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropArea.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropArea.classList.add('drag-active');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('drag-active');
+      });
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files.length > 0) handleFile(files[0]);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          loadWorkbookData(wb, file.name);
+        } catch (err) {
+          console.error(err);
+          showToast('檔案解析失敗，請確認檔案格式是否正確。', 'error');
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    // --- Mock Demo Enterprise Dataset Generator (Multi-Sheet) ---
+    document.getElementById('loadDemoBtn').addEventListener('click', () => {
+      // 1. Sheet 1: 員工與薪資機密清冊 (Employees & HR Payroll)
+      const hrSheet = [
+        { "員工編號": "EMP-8001", "姓名": "陳建宏", "身分證號": "A129384756", "手機號碼": "0912-345-678", "電子信箱": "jhchen@techcorp.tw", "部門": "研發核心部", "職稱": "首席架構師", "月薪底薪": 145000, "年度獎金": 580000, "戶籍地址": "台北市大安區敦化南路二段105號" },
+        { "員工編號": "EMP-8002", "姓名": "林雅婷", "身分證號": "F228491029", "手機號碼": "0928-888-123", "電子信箱": "ytlin@techcorp.tw", "部門": "財務投資部", "職稱": "財務協理", "月薪底薪": 132000, "年度獎金": 490000, "戶籍地址": "新北市板橋區縣民大道88號" },
+        { "員工編號": "EMP-8003", "姓名": "黃宗翰", "身分證號": "B120938491", "手機號碼": "0933-776-554", "電子信箱": "thhuang@techcorp.tw", "部門": "全球業務部", "職稱": "資深業務總監", "月薪底薪": 115000, "年度獎金": 820000, "戶籍地址": "台中市西屯區台灣大道三段99號" },
+        { "員工編號": "EMP-8004", "姓名": "張家豪", "身分證號": "E123847582", "手機號碼": "0988-112-233", "電子信箱": "jhchang@techcorp.tw", "部門": "產品研發部", "職稱": "資深工程師", "月薪底薪": 92000, "年度獎金": 230000, "戶籍地址": "高雄市左營區博愛二路36號" },
+        { "員工編號": "EMP-8005", "姓名": "李欣妤", "身分證號": "H229103847", "手機號碼": "0910-334-998", "電子信箱": "xyli@techcorp.tw", "部門": "研發核心部", "職稱": "AI演算法工程師", "月薪底薪": 98000, "年度獎金": 260000, "戶籍地址": "桃園市中壢區中正路150號" }
+      ];
+
+      // 2. Sheet 2: 企業大客戶銷售與應收帳款 (B2B Enterprise Contracts)
+      const salesSheet = [
+        { "訂單編號": "PO-2026-001", "經手員工": "陳建宏", "客戶名稱": "聯發數位科技股份有限公司", "統一編號": "54893021", "主要聯絡人": "林雅婷", "聯絡信箱": "procure@mtkdemo.com", "專案合約總額": 18500000, "硬體開發成本": 7400000, "淨毛利率": 60.0, "付款銀行帳號": "012-88392019485" },
+        { "訂單編號": "PO-2026-002", "經手員工": "黃宗翰", "客戶名稱": "宏達先進雲端實業", "統一編號": "28394857", "主要聯絡人": "張家豪", "聯絡信箱": "contact@htccloud.com", "專案合約總額": 9400000, "硬體開發成本": 4200000, "淨毛利率": 55.3, "付款銀行帳號": "013-33928174829" },
+        { "訂單編號": "PO-2026-003", "經手員工": "黃宗翰", "客戶名稱": "富邦商務物流顧問", "統一編號": "19283746", "主要聯絡人": "李欣妤", "聯絡信箱": "service@fubondemo.com", "專案合約總額": 24000000, "硬體開發成本": 11000000, "淨毛利率": 54.1, "付款銀行帳號": "004-99283746501" }
+      ];
+
+      // Build in-memory SheetJS Workbook
+      const wb = XLSX.utils.book_new();
+      const ws1 = XLSX.utils.json_to_sheet(hrSheet);
+      const ws2 = XLSX.utils.json_to_sheet(salesSheet);
+
+      XLSX.utils.book_append_sheet(wb, ws1, "員工薪資機密清冊");
+      XLSX.utils.book_append_sheet(wb, ws2, "B2B企業合約應收帳款");
+
+      loadWorkbookData(wb, "2026_企業核心敏感營收與個資綜合表.xlsx");
+      showToast("已成功載入企業跨工作表關聯測試數據！", "success");
+    });
+
+    // Re-detect & Apply buttons
+    document.getElementById('autoDetectAllBtn').addEventListener('click', () => {
+      autoDetectColumns();
+      executeDeIdentification();
+      renderConfigTable();
+      showToast('已重新對全工作表欄位完成隱私型態辨識！', 'info');
+    });
+
+    document.getElementById('applyAllBtn').addEventListener('click', () => {
+      executeDeIdentification();
+      showToast('全域脫敏運算完成，關聯雜湊字典已更新！', 'success');
+    });
+
+    // --- Export De-identified Workbook ---
+    document.getElementById('exportDataBtn').addEventListener('click', () => {
+      try {
+        const outWb = XLSX.utils.book_new();
+        AppState.sheetNames.forEach(sheetName => {
+          const processedRows = AppState.processedData[sheetName] || [];
+          const ws = XLSX.utils.json_to_sheet(processedRows);
+          XLSX.utils.book_append_sheet(outWb, ws, sheetName);
+        });
+
+        const rawName = AppState.fileName.replace(/\.[^/.]+$/, "");
+        const outputFilename = `${rawName}_去識別化完成.xlsx`;
+        XLSX.writeFile(outWb, outputFilename);
+        showToast(`已順利匯出已去識別化檔案：${outputFilename}`, 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('匯出過程發生錯誤，請重試。', 'error');
+      }
+    });
+
+    // --- Global Ledger Modal Management ---
+    const ledgerModal = document.getElementById('ledgerModalBackdrop');
+    const openLedgerBtn = document.getElementById('openLedgerBtn');
+    const closeLedgerBtn = document.getElementById('closeLedgerBtn');
+    const closeLedgerFootBtn = document.getElementById('closeLedgerFootBtn');
+    const exportLedgerBtn = document.getElementById('exportLedgerBtn');
+
+    openLedgerBtn.addEventListener('click', () => {
+      populateLedgerTable();
+      ledgerModal.style.display = 'flex';
+    });
+
+    const hideLedger = () => ledgerModal.style.display = 'none';
+    closeLedgerBtn.addEventListener('click', hideLedger);
+    closeLedgerFootBtn.addEventListener('click', hideLedger);
+
+    function updateLedgerCount() {
+      let count = 0;
+      for (const k in AppState.globalLedger) {
+        count += AppState.globalLedger[k].size;
+      }
+      openLedgerBtn.innerHTML = `<i class="ph ph-notebook"></i> <span>查看對照表記錄 (${count})</span>`;
+    }
+
+    function populateLedgerTable() {
+      const tbody = document.getElementById('ledgerTableBody');
+      tbody.innerHTML = '';
+
+      let hasData = false;
+      const categories = [
+        { key: 'names', label: '姓名 (Name)' },
+        { key: 'ids', label: '身分證 / 證號 (ID)' },
+        { key: 'emails', label: '電子信箱 (Email)' },
+        { key: 'companies', label: '企業客戶 (Company)' },
+        { key: 'general', label: '通用項目 (General)' }
+      ];
+
+      categories.forEach(cat => {
+        const map = AppState.globalLedger[cat.key];
+        if (map && map.size > 0) {
+          hasData = true;
+          map.forEach((anonVal, origVal) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><span class="badge badge-general">${cat.label}</span></td>
+              <td style="font-family: monospace; color: #fca5a5;">${origVal}</td>
+              <td style="font-family: monospace; color: #6ee7b7; font-weight:600;">${anonVal}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      });
+
+      if (!hasData) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#64748b; padding:24px;">目前尚無假名化或替換對照記錄</td></tr>`;
+      }
+    }
+
+    // Export Separate Mapping Ledger as Excel
+    exportLedgerBtn.addEventListener('click', () => {
+      const rows = [];
+      const categories = ['names', 'ids', 'emails', 'companies', 'general'];
+      categories.forEach(cat => {
+        const map = AppState.globalLedger[cat];
+        if (map) {
+          map.forEach((anonVal, origVal) => {
+            rows.push({
+              "類別": cat.toUpperCase(),
+              "原始資料 (Original Sensitive)": origVal,
+              "假名對照值 (De-Identified Pseudonym)": anonVal,
+              "建立時間戳記": new Date().toISOString()
+            });
+          });
+        }
+      });
+
+      if (rows.length === 0) {
+        showToast('目前尚無任何假名化紀錄可匯出。', 'error');
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, "去識別化密鑰對照表");
+      XLSX.writeFile(wb, `企業去識別化_對照表_CONFIDENTIAL_${Date.now()}.xlsx`);
+      showToast('已匯出獨立敏感對照表，請妥善保密儲存！', 'success');
+    });
+  </script>
+</body>
+</html>

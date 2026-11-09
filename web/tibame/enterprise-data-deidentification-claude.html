@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>企業資料去識別化工具 - Builded by Cassell</title>
+<style>
+:root{--bg:#eef1f4;--card:#fff;--ink:#14212b;--mute:#5d6b78;--line:#d6dde3;--acc:#0b6b6b;--acc2:#e3f2f1;--pii:#b23a48;--biz:#8a5a00;--chg:#fff3c4}
+@media (prefers-color-scheme:dark){:root{--bg:#10171d;--card:#18222a;--ink:#e6edf2;--mute:#93a3b0;--line:#2c3945;--acc:#4fc3c0;--acc2:#16302f;--pii:#ff8b98;--biz:#f0bf5c;--chg:#4a4119}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:.02em}
+h1 small{font-size:12px;font-weight:400;color:var(--mute);margin-left:10px}
+.sub{color:var(--mute);margin:0 0 22px}
+section{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:16px}
+h2{font-size:16px;margin:0 0 12px}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:26px;text-align:center;color:var(--mute);cursor:pointer}
+.drop.on,.drop:hover{border-color:var(--acc);background:var(--acc2)}
+button{font:inherit;border:1px solid var(--acc);background:var(--acc);color:#fff;padding:7px 16px;border-radius:6px;cursor:pointer}
+button.ghost{background:transparent;color:var(--acc)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button{background:transparent;color:var(--ink);border-color:var(--line)}
+.tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--acc2);font-weight:600}
+td.chg{background:var(--chg)}
+select,input[type=text]{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--card);color:var(--ink);max-width:170px}
+input[type=text]{width:110px}
+.tag{font-size:12px;padding:1px 8px;border-radius:10px;border:1px solid currentColor}
+.tag.pii{color:var(--pii)}.tag.biz{color:var(--biz)}.tag.key{color:var(--acc)}.tag.norm{color:var(--mute)}
+.eg{color:var(--mute);max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.note{color:var(--mute);font-size:13px;margin:8px 0 0}
+h3{font-size:14px;margin:14px 0 6px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>企業資料去識別化工具<small>Builded by Cassell</small></h1>
+<p class="sub">所有處理都在瀏覽器本機完成，檔案不會上傳到任何伺服器。</p>
+
+<section>
+  <h2>1. 載入資料</h2>
+  <div class="drop" id="drop" tabindex="0">拖曳 Excel（.xlsx / .xls）或 CSV 到這裡，或點擊選擇檔案</div>
+  <input type="file" id="file" accept=".xlsx,.xls,.csv" class="hide">
+  <div class="row" style="margin-top:12px">
+    <button id="btnSample" class="ghost">載入測試範例資料</button>
+    <span id="status" class="note" style="margin:0"></span>
+  </div>
+</section>
+
+<section id="work" class="hide">
+  <h2>2. 設定欄位處理方式</h2>
+  <div class="tabs" id="tabs"></div>
+  <div class="wrap"><table id="cfg"></table></div>
+  <p class="note">偵測結果可手動修正。「假名化」會依原始值建立一致對應，同一個值在所有工作表都得到相同假名，因此可保留跨表關聯；「等比例縮放」預設整份資料共用同一個倍率，欄位間的比例關係不變。</p>
+  <div class="row" style="margin-top:10px">
+    <label>縮放倍率（全域）<input type="text" id="factor" style="width:80px"></label>
+    <button class="ghost" id="btnSeed">重新亂數</button>
+  </div>
+
+  <h3>預覽（前 6 列，黃底為已變更）</h3>
+  <div class="wrap"><table id="pv"></table></div>
+</section>
+
+<section id="exp" class="hide">
+  <h2>3. 匯出</h2>
+  <div class="row">
+    <button id="exX">匯出去識別化 Excel（全部工作表）</button>
+    <button id="exC" class="ghost">匯出目前工作表 CSV</button>
+    <button id="exM" class="ghost">匯出對照表與處理設定</button>
+  </div>
+  <p class="note">對照表含原始值，等同機密資料，請與去識別化檔案分開保管。完全抹除與遮罩無法還原，對照表只記錄可追溯的原始值對應。</p>
+</section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TYPES={name:['姓名','pii'],nid:['身分證 / 統編','pii'],phone:['電話','pii'],email:['Email','pii'],address:['地址','pii'],account:['帳號 / 卡號','pii'],company:['公司 / 客戶名稱','biz'],money:['財務金額','biz'],key:['識別碼 / 關聯鍵','key'],date:['日期','norm'],number:['一般數值','norm'],text:['一般文字','norm']};
+const TAG={pii:'個資',biz:'營業秘密',key:'關聯鍵',norm:'一般'};
+const METHODS={none:'不處理',pseudo:'假名化',mask:'遮罩',gen:'泛化',scale:'等比例縮放',perturb:'數值微擾',erase:'完全抹除'};
+const DEFM={name:'pseudo',nid:'mask',phone:'mask',email:'pseudo',address:'gen',account:'mask',company:'pseudo',money:'scale',key:'pseudo',date:'gen',number:'none',text:'none'};
+const S={wb:null,cfg:{},active:null,seed:Math.random()*1e9|0,factor:1,out:null,map:[]};
+
+function defParam(t,m){
+  if(m==='mask')return{nid:'1,3',phone:'4,2',account:'0,4',email:''}[t]??'1,1';
+  if(m==='gen')return t==='money'?'10000':t==='number'?'10':t==='date'?'month':'6';
+  if(m==='perturb')return t==='date'?'7':'5';
+  return '';
+}
+function detect(h,v){
+  const s=v.filter(x=>x!==''&&x!=null).slice(0,200).map(x=>String(x).trim()),n=s.length||1;
+  const t=re=>s.filter(x=>re.test(x)).length/n>=.7;
+  if(t(/^[A-Z][12]\d{8}$/))return'nid';
+  if(t(/^[^\s@]+@[^\s@]+\.\w+$/))return'email';
+  if(t(/^(\+?886-?|0)9\d{2}-?\d{3}-?\d{3}$/))return'phone';
+  const H=[['nid',/身分證|身份證|證號|統編|ssn/i],['account',/帳號|帳戶|卡號|account|iban/i],['phone',/電話|手機|phone|mobile|tel/i],['email',/mail|信箱/i],['address',/地址|address/i],['name',/姓名|名字|聯絡人|負責人|業務|^name$|contact/i],['company',/公司|客戶名稱|廠商|供應商|company|vendor/i],['date',/生日|出生|日期|date|birth/i],['money',/金額|價|費|薪|獎金|營收|收入|成本|利潤|毛利|預算|amount|price|salary|revenue|cost|profit|budget|total/i],['key',/編號|代號|單號|\bid\b|_id|code/i]];
+  for(const[k,re]of H)if(re.test(h))return k;
+  if(t(/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/))return'date';
+  if(s.length&&t(/^-?[\d,]+(\.\d+)?$/))return'number';
+  return'text';
+}
+const p2=n=>String(n).padStart(2,'0');
+const fmtD=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+function rnd(s){let h=1779033703^S.seed;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^h>>>16)>>>0)/4294967296}
+const num=v=>typeof v==='number'?v:parseFloat(String(v).replace(/[^\d.\-]/g,''));
+
+/* ---------- 載入 ---------- */
+function setBook(book,label){
+  S.wb=book;S.cfg={};S.factor=+(0.5+Math.random()*1.5).toFixed(3);
+  let sens=0,rows=0;
+  for(const k in book){
+    const{h,r}=book[k];rows+=r.length;
+    S.cfg[k]=h.map((x,i)=>{const t=detect(x,r.map(a=>a[i]));if(TYPES[t][1]==='pii'||TYPES[t][1]==='biz')sens++;const m=DEFM[t];return{type:t,m,p:defParam(t,m)}});
+  }
+  S.active=Object.keys(book)[0];
+  $('#status').textContent=`已載入「${label}」：${Object.keys(book).length} 個工作表、${rows} 列資料，自動辨識 ${sens} 個敏感欄位。`;
+  $('#work').classList.remove('hide');$('#exp').classList.remove('hide');
+  render();
+}
+function readFile(f){
+  if(typeof XLSX==='undefined'){alert('無法載入 SheetJS 函式庫，請確認網路連線後重新整理。');return}
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      let wb;
+      if(/\.csv$/i.test(f.name)){
+        let t=new TextDecoder('utf-8').decode(fr.result);
+        if(t.includes('\uFFFD'))try{t=new TextDecoder('big5').decode(fr.result)}catch(e){}
+        wb=XLSX.read(t,{type:'string',cellDates:true});
+      }else wb=XLSX.read(fr.result,{type:'array',cellDates:true});
+      const book={};
+      wb.SheetNames.forEach(n=>{
+        const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''});
+        if(!a.length)return;
+        const h=a[0].map((x,i)=>String(x).trim()||'欄位'+(i+1));
+        const r=a.slice(1).filter(x=>x.some(c=>c!=='')).map(x=>h.map((_,i)=>{const c=x[i]??'';return c instanceof Date?fmtD(new Date(c.getTime()+60000)):c}));
+        book[n]={h,r};
+      });
+      if(!Object.keys(book).length)throw new Error('檔案內沒有資料');
+      setBook(book,f.name);
+    }catch(e){alert('讀取失敗：'+e.message)}
+  };
+  fr.readAsArrayBuffer(f);
+}
+const drop=$('#drop'),fi=$('#file');
+drop.onclick=()=>fi.click();
+drop.onkeydown=e=>{if(e.key==='Enter')fi.click()};
+fi.onchange=()=>fi.files[0]&&readFile(fi.files[0]);
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('on')};
+drop.ondragleave=()=>drop.classList.remove('on');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('on');e.dataTransfer.files[0]&&readFile(e.dataTransfer.files[0])};
+
+/* ---------- 測試資料 ---------- */
+function sample(){
+  let s=20260;const R=()=>(s=s*16807%2147483647)/2147483647,P=a=>a[R()*a.length|0],D=n=>String(R()*10**n|0).padStart(n,'0');
+  const sn='陳林黃張李王吳劉蔡楊許鄭'.split(''),gn=['怡君','家豪','雅婷','志明','淑芬','建宏','佩珊','冠宇','宗翰','詩涵','承恩','欣怡'];
+  const nm=()=>P(sn)+P(gn),id=()=>P('ABCDEFHJKL'.split(''))+(1+R()*2|0)+D(8);
+  const dt=y=>`${y}-${p2(1+R()*12|0)}-${p2(1+R()*28|0)}`;
+  const emp=[];for(let i=0;i<10;i++){const w=(4+R()*8|0)*10000;emp.push(['E'+(1001+i),nm(),id(),'012-'+D(12),w,w*(1+R()*2|0),P(['業務部','研發部','財務部','人資部'])])}
+  const cus=[];for(let i=0;i<25;i++)cus.push(['C'+(1001+i),nm(),id(),`09${D(2)}-${D(3)}-${D(3)}`,`${P(['amy','tom','lee','kai'])}${i}@${P(['gmail.com','yahoo.com.tw','corp.com.tw'])}`,P(['台北市信義區','新北市板橋區','台中市西屯區','高雄市前鎮區'])+P(['忠孝路','中山路','民生路'])+(1+R()*200|0)+'號',dt(1960+(R()*40|0)),P(['宏達','鼎新','台揚','崇越','聯華'])+P(['科技','電子','實業'])+'股份有限公司']);
+  const ord=[];for(let i=0;i<60;i++){const a=(20+R()*480|0)*1000,c=Math.round(a*(.5+R()*.3)/100)*100;ord.push(['O'+(20001+i),'C'+(1001+(R()*25|0)),dt(2025),a,c,a-c,P(emp)[1]])}
+  return{
+    '客戶資料':{h:['客戶編號','姓名','身分證字號','手機','Email','地址','生日','公司名稱'],r:cus},
+    '訂單明細':{h:['訂單編號','客戶編號','訂單日期','訂單金額','成本','毛利','負責業務'],r:ord},
+    '員工薪資':{h:['員工編號','姓名','身分證字號','銀行帳號','月薪','年終獎金','部門'],r:emp}
+  };
+}
+$('#btnSample').onclick=()=>setBook(sample(),'測試範例資料');
+
+/* ---------- 處理核心 ---------- */
+function run(){
+  const maps={},cnt={},seen=new Set(),pad=(n,l)=>String(n).padStart(l,'0');
+  S.map=[];S.out={};
+  const fp=(t,n)=>({name:'人員'+pad(n,4),company:'公司'+pad(n,4),nid:'Z1'+pad(n,8),phone:'0900'+pad(n,6),email:`user${pad(n,4)}@example.com`,address:'地址'+pad(n,4),account:'ACCT'+pad(n,8),key:'ID-'+pad(n,5)}[t]||'V'+pad(n,5));
+  const pseudo=(h,t,v)=>{const ns=t==='key'?'key:'+h:t,k=ns+'|'+v;if(maps[k]===undefined){cnt[ns]=(cnt[ns]||0)+1;maps[k]=fp(t,cnt[ns])}return maps[k]};
+  function tr(v,c,h){
+    if(v===''||v==null||c.m==='none')return v;
+    const{type:t,m,p}=c,isN=t==='money'||t==='number',s=String(v);
+    if(m==='erase')return'[已抹除]';
+    if(m==='pseudo')return pseudo(h,t,s);
+    if(m==='mask'){
+      if(t==='email'&&s.includes('@')){const[l,d]=s.split('@');return l[0]+'*'.repeat(Math.max(l.length-1,2))+'@'+d}
+      const[a,b]=(p||'1,1').split(',').map(x=>parseInt(x)||0);
+      return s.length<=a+b?'*'.repeat(s.length):s.slice(0,a)+'*'.repeat(s.length-a-b)+s.slice(s.length-b);
+    }
+    if(m==='gen'){
+      if(isN){const n=num(v),w=parseFloat(p)||10;if(isNaN(n))return v;const lo=Math.floor(n/w)*w;return lo+'~'+(lo+w)}
+      if(t==='date'){const x=s.replace(/\//g,'-').match(/^(\d{4})-(\d{1,2})/);return x?(p==='year'?x[1]:x[1]+'-'+p2(x[2])):v}
+      const n=parseInt(p)||6;return s.length>n?s.slice(0,n)+'…':s;
+    }
+    if(m==='scale'){const n=num(v);if(isNaN(n))return v;const r=n*(parseFloat(p)||S.factor);return Number.isInteger(n)?Math.round(r):Math.round(r*100)/100}
+    if(m==='perturb'){
+      const pct=parseFloat(p)||5,r=rnd(h+'|'+s)*2-1;
+      if(t==='date'){const d=new Date(s.replace(/\//g,'-'));if(isNaN(d))return v;d.setDate(d.getDate()+Math.round(r*pct));return fmtD(d)}
+      const n=num(v);if(isNaN(n))return v;const o=n*(1+r*pct/100);return Number.isInteger(n)?Math.round(o):Math.round(o*100)/100;
+    }
+    return v;
+  }
+  for(const k in S.wb){
+    const{h,r}=S.wb[k],cf=S.cfg[k];
+    const rows=r.map(row=>row.map((v,i)=>{
+      const o=tr(v,cf[i],h[i]);
+      if(cf[i].m!=='none'&&cf[i].m!=='erase'&&String(o)!==String(v)){const key=k+'|'+h[i]+'|'+v;if(!seen.has(key)){seen.add(key);S.map.push([k,h[i],TYPES[cf[i].type][0],METHODS[cf[i].m],v,o])}}
+      return o}));
+    S.out[k]={h,r:rows};
+  }
+}
+
+/* ---------- 畫面 ---------- */
+function render(){
+  $('#factor').value=S.factor;
+  $('#tabs').innerHTML=Object.keys(S.wb).map(k=>`<button class="${k===S.active?'on':''}" data-s="${esc(k)}">${esc(k)}（${S.wb[k].r.length}）</button>`).join('');
+  const{h,r}=S.wb[S.active],cf=S.cfg[S.active];
+  let t='<tr><th>欄位</th><th>類別</th><th>辨識類型</th><th>處理方式</th><th>參數</th><th>範例值</th></tr>';
+  h.forEach((x,i)=>{
+    const c=cf[i],tg=TYPES[c.type][1];
+    t+=`<tr><td>${esc(x)}</td><td><span class="tag ${tg}">${TAG[tg]}</span></td>
+    <td><select data-i="${i}" data-k="type">${Object.entries(TYPES).map(([a,b])=>`<option value="${a}"${a===c.type?' selected':''}>${b[0]}</option>`).join('')}</select></td>
+    <td><select data-i="${i}" data-k="m">${Object.entries(METHODS).map(([a,b])=>`<option value="${a}"${a===c.m?' selected':''}>${b}</option>`).join('')}</select></td>
+    <td><input type="text" data-i="${i}" data-k="p" value="${esc(c.p)}" placeholder="${hint(c)}" ${['none','pseudo','erase'].includes(c.m)||c.m==='scale'&&0?'disabled':''}></td>
+    <td class="eg">${esc(r.find(a=>a[i]!=='')?.[i]??'')}</td></tr>`;
+  });
+  $('#cfg').innerHTML=t;
+  update();
+}
+function hint(c){return{mask:'保留前,後 字元',gen:c.type==='date'?'month 或 year':['money','number'].includes(c.type)?'區間寬度':'保留字元數',scale:'空白=全域倍率',perturb:c.type==='date'?'±天數':'±百分比'}[c.m]||''}
+function update(){
+  run();
+  const{h,r}=S.wb[S.active],o=S.out[S.active].r.slice(0,6);
+  let t='<tr>'+h.map(x=>`<th>${esc(x)}</th>`).join('')+'</tr>';
+  o.forEach((row,ri)=>{t+='<tr>'+row.map((v,i)=>`<td class="${String(v)!==String(r[ri][i])?'chg':''}">${esc(v)}</td>`).join('')+'</tr>'});
+  $('#pv').innerHTML=t;
+}
+$('#tabs').onclick=e=>{const b=e.target.closest('button');if(b){S.active=b.dataset.s;render()}};
+$('#cfg').onchange=e=>{
+  const el=e.target,c=S.cfg[S.active][el.dataset.i];if(!c)return;
+  if(el.dataset.k==='type'){c.type=el.value;c.m=DEFM[c.type];c.p=defParam(c.type,c.m)}
+  else if(el.dataset.k==='m'){c.m=el.value;c.p=defParam(c.type,c.m)}
+  else c.p=el.value;
+  render();
+};
+$('#cfg').oninput=e=>{if(e.target.dataset.k==='p'){S.cfg[S.active][e.target.dataset.i].p=e.target.value;update()}};
+$('#factor').oninput=e=>{const f=parseFloat(e.target.value);if(f>0){S.factor=f;update()}};
+$('#btnSeed').onclick=()=>{S.seed=Math.random()*1e9|0;S.factor=+(0.5+Math.random()*1.5).toFixed(3);render()};
+
+/* ---------- 匯出 ---------- */
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+const sheet=(h,r)=>XLSX.utils.aoa_to_sheet([h,...r]);
+$('#exX').onclick=()=>{run();const wb=XLSX.utils.book_new();for(const k in S.out)XLSX.utils.book_append_sheet(wb,sheet(S.out[k].h,S.out[k].r),k.slice(0,31));XLSX.writeFile(wb,'deidentified.xlsx')};
+$('#exC').onclick=()=>{run();const o=S.out[S.active];dl(new Blob(['\ufeff'+XLSX.utils.sheet_to_csv(sheet(o.h,o.r))],{type:'text/csv'}),`deidentified_${S.active}.csv`)};
+$('#exM').onclick=()=>{
+  run();const wb=XLSX.utils.book_new(),cfg=[];
+  for(const k in S.wb)S.wb[k].h.forEach((x,i)=>{const c=S.cfg[k][i];cfg.push([k,x,TYPES[c.type][0],METHODS[c.m],c.m==='scale'&&!c.p?'全域倍率 '+S.factor:c.p])});
+  XLSX.utils.book_append_sheet(wb,sheet(['工作表','欄位','敏感類型','處理方式','處理後值'.replace('處理後值','參數')],cfg),'處理設定');
+  XLSX.utils.book_append_sheet(wb,sheet(['工作表','欄位','敏感類型','處理方式','原始值','處理後值'],S.map),'對照表');
+  XLSX.writeFile(wb,'mapping_table.xlsx');
+};
+</script>
+</body>
+</html>

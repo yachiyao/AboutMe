@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>塔羅牌占卜</title>
+<style>
+:root{--bg:#f6f1e7;--fg:#2b2340;--mut:#6b6280;--card:#fffaf0;--ac:#7a4fb5;--line:#d9cfe6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14102a;--fg:#ece6f7;--mut:#a79cc2;--card:#201a3d;--ac:#c9a7ff;--line:#3a3166;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14102a;--fg:#ece6f7;--mut:#a79cc2;--card:#201a3d;--ac:#c9a7ff;--line:#3a3166;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Noto Serif TC","PingFang TC","Microsoft JhengHei",serif;line-height:1.8}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px}
+h1{text-align:center;letter-spacing:.3em;margin:8px 0}
+.sub{text-align:center;color:var(--mut);margin:0 0 20px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px}
+input{flex:1 1 260px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font:inherit}
+button{font:inherit;cursor:pointer;border:1px solid var(--ac);background:transparent;color:var(--ac);padding:8px 16px;border-radius:8px}
+button.on,button.go{background:var(--ac);color:var(--bg)}
+.row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:20px 0}
+.slot{width:150px;text-align:center}
+.pos{color:var(--mut);font-size:14px;margin-bottom:6px}
+.card{width:150px;height:240px;border:2px solid var(--ac);border-radius:12px;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;box-sizing:border-box}
+.card.back{background:repeating-linear-gradient(45deg,var(--card),var(--card) 10px,var(--line) 10px,var(--line) 12px);font-size:42px;color:var(--ac)}
+.sym{font-size:56px}.rev .sym{transform:rotate(180deg)}
+.nm{font-weight:700;font-size:18px}.en{font-size:12px;color:var(--mut)}
+.tag{margin-top:6px;font-size:13px;color:var(--ac)}
+.read{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:14px 18px;margin:12px 0}
+.read h3{margin:0 0 4px;color:var(--ac)}
+.read p{margin:6px 0}
+.sum{border-left:4px solid var(--ac);padding-left:14px}
+.hint{text-align:center;color:var(--mut)}
+</style>
+</head>
+<body>
+<main>
+<h1>塔羅牌占卜</h1>
+<p class="sub">靜下心來，專注於你的問題，然後抽牌。</p>
+<div class="ctl">
+<input id="q" placeholder="寫下你的問題（可留空）" maxlength="60">
+<button id="m3" class="on">三張牌：過去・現在・未來</button>
+<button id="m1">單張牌：今日指引</button>
+</div>
+<div class="ctl"><button class="go" id="draw">洗牌並抽牌</button></div>
+<div id="out"></div>
+</main>
+<script>
+const D=`愚者|The Fool|🌱|新開始・自由・冒險|你正站在人生的新起點，帶著純粹的信任踏出第一步。放下過度計畫，勇敢嘗試將帶來意外的收穫。|衝動輕率，或遲遲不敢出發。行動前先確認風險，別讓天真變成魯莽。
+魔術師|The Magician|🪄|創造・行動・資源|你手上已具備所需的資源與能力，現在正是把想法落實的時機。專注目標，主動出擊。|能力未被善用，或出現操弄、虛張聲勢。回頭檢視初衷，避免分心。
+女祭司|The High Priestess|🌙|直覺・祕密・靜待|答案藏在內心深處，傾聽直覺並保持沉默觀察。有些資訊尚未浮現，需要耐心等待。|忽視直覺或被表象迷惑。在隱情浮現前，避免倉促下判斷。
+皇后|The Empress|🌸|豐盛・滋養・創造|豐饒與關愛的能量，感情溫暖、計畫成長。享受過程，也善待自己與身邊的人。|過度依賴、付出失衡，創造力受阻。重新找回照顧自己的節奏。
+皇帝|The Emperor|👑|秩序・權威・穩固|以結構與紀律建立穩固基礎，需要明確的規則與責任感，你的領導力將被看見。|固執專斷或缺乏紀律。放下控制欲，保持彈性。
+教皇|The Hierophant|📿|傳統・指引・信念|向經驗與制度學習，尋求導師或依循成熟的方法。你的價值觀將獲得認同。|被僵化的規範束縛。勇於質疑，走出適合自己的路。
+戀人|The Lovers|💞|選擇・契合・關係|面臨重要選擇或深刻連結，忠於內心價值，才能做出無悔的決定。|價值衝突、溝通失衡或猶豫不決。誠實面對自己真正想要的。
+戰車|The Chariot|🏇|意志・勝利・前進|以強大的意志整合不同力量，朝目標果斷推進，勝利可期。|失去方向或過度逞強。先穩住內在，再談前進。
+力量|Strength|🦁|勇氣・耐心・柔韌|以溫柔與耐心馴服內在的野性，真正的強大來自自我掌控。|自我懷疑或情緒失控。重建信心，接納自己的脆弱。
+隱者|The Hermit|🏮|內省・智慧・獨處|暫時抽離喧囂，向內探尋，獨處將帶來深刻的洞見。|過度孤立或逃避現實。適度向外求助，別把自己封閉。
+命運之輪|Wheel of Fortune|☸️|轉機・循環・命運|局勢出現轉折，好運開始流動。順應變化，把握時機。|運勢低迷或抗拒改變。這只是週期的一部分，調整心態、待時而動。
+正義|Justice|⚖️|公正・因果・平衡|依事實與理性做出公平的決定，過去的作為將得到相應的結果。|不公、逃避責任或帶有偏見。誠實檢視自己的選擇。
+倒吊人|The Hanged Man|🙃|放下・換角度・等待|暫停與臣服，換個角度反而看見新的可能，以短期犧牲換取長遠價值。|無謂的拖延或犧牲。該放手時，不要再僵持。
+死神|Death|🦋|結束・轉化・重生|一個階段終結，為新生騰出空間。告別不再適合的事物，轉變已在發生。|抗拒結束、停滯不前。接受改變，才能真正前行。
+節制|Temperance|🍷|調和・耐心・平衡|以適度與融合取得平衡，循序漸進最為穩妥。|失衡、過度或缺乏耐心。重新找回生活的節奏。
+惡魔|The Devil|⛓️|慾望・束縛・執著|留意讓你上癮或受限的事物，許多枷鎖其實出於自己的默許。|開始覺察並掙脫束縛，重獲自由與主導權。
+高塔|The Tower|⚡|崩解・突變・覺醒|虛假的結構突然崩塌，雖然震盪，卻帶來真相與重建的契機。|延遲的崩潰或對變動的恐懼。主動面對，可減少衝擊。
+星星|The Star|⭐|希望・療癒・指引|風暴之後的平靜與希望。保持信心，你的願景正在成形。|失去信心或過度理想化。從小步行動重拾希望。
+月亮|The Moon|🌕|不安・幻象・潛意識|情況未明，恐懼與想像放大了不安。別急於定論，信任直覺並釐清事實。|迷霧漸散、真相浮現，焦慮開始緩解。
+太陽|The Sun|☀️|成功・喜悅・活力|光明、成功與自信，努力將獲得肯定，適合公開行動。|樂觀過頭或進展稍遲。喜悅仍在，只需更多耐心。
+審判|Judgement|📯|覺醒・召喚・重生|回顧過往，聽見內在的召喚，做出重大決定，並原諒自己。|自我批判或無視召喚。別讓悔恨困住你。
+世界|The World|🌍|圓滿・完成・整合|一個週期圓滿完成，成就達成，同時預示新旅程的開始。|臨門一腳尚未完成。檢查缺漏，收好最後一步。`.split("\n").map(l=>{const a=l.split("|");return{n:a[0],e:a[1],s:a[2],k:a[3],u:a[4],r:a[5]}});
+const P={3:[["過去","影響你的根源","這張牌反映促成現況的背景："],["現在","當下的處境","這張牌描述你此刻的核心狀態："],["未來","可能的走向","若維持目前方向，趨勢是："]],1:[["今日指引","","今天請留意："]]};
+let mode=3,picks=[],shown=[];
+const $=id=>document.getElementById(id);
+function setMode(m){mode=m;$("m3").classList.toggle("on",m==3);$("m1").classList.toggle("on",m==1);$("out").innerHTML="";}
+$("m3").onclick=()=>setMode(3);$("m1").onclick=()=>setMode(1);
+$("draw").onclick=()=>{
+ const idx=[...Array(22).keys()].sort(()=>Math.random()-.5).slice(0,mode);
+ picks=idx.map(i=>({c:D[i],rev:Math.random()<.35}));shown=picks.map(()=>false);render();
+};
+function flip(i){shown[i]=true;render()}
+function render(){
+ const q=$("q").value.trim(),pos=P[mode];
+ let h=q?`<p class="hint">你的問題：${esc(q)}</p>`:"";
+ h+='<div class="row">'+picks.map((p,i)=>`<div class="slot"><div class="pos">${pos[i][0]}</div>`+(shown[i]
+  ?`<div class="card ${p.rev?"rev":""}"><div class="sym">${p.c.s}</div><div class="nm">${p.c.n}${p.rev?"（逆位）":"（正位）"}</div><div class="en">${p.c.e}</div><div class="tag">${p.c.k}</div></div>`
+  :`<button class="card back" onclick="flip(${i})" aria-label="翻開第${i+1}張牌">✦</button>`)+`</div>`).join("")+"</div>";
+ if(shown.includes(false)){h+='<p class="hint">點擊牌背翻牌</p>'}
+ else{
+  h+=picks.map((p,i)=>`<div class="read"><h3>${pos[i][0]}｜${p.c.n}${p.rev?"（逆位）":"（正位）"}</h3><p><b>關鍵字：</b>${p.c.k}</p><p>${pos[i][2]}${p.rev?p.c.r:p.c.u}</p></div>`).join("");
+  const rv=picks.filter(p=>p.rev).length;
+  let t=rv==0?"全部為正位，能量順暢、方向明確，可放心按計畫推進。":rv==picks.length?"全部為逆位，代表內在阻力或時機未到，適合先沉澱、調整，再行動。":"正逆位交錯，顯示局勢有順有阻。留意逆位牌所指出的課題，並善用正位牌的助力。";
+  if(mode==3)t+=`從「${picks[0].c.n}」走到「${picks[1].c.n}」，再朝向「${picks[2].c.n}」，這條軌跡提醒你：把握當下的選擇，就是改變未來的關鍵。`;
+  h+=`<div class="read sum"><h3>綜合解讀</h3><p>${t}</p><p class="hint" style="text-align:left">塔羅是反思與自我對話的工具，結果僅供參考，重要決定仍請依自身判斷。</p></div>`;
+ }
+ $("out").innerHTML=h;
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MOPS 現金流分析室</title>
+<style>
+:root{--bg:#f3f6fa;--ink:#172d46;--muted:#6c7d90;--line:#e1e8f0;--blue:#3568df;--green:#168879;--red:#cc5265}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}header{background:#142b43;color:white;padding:30px max(24px,calc((100vw - 1360px)/2));display:flex;justify-content:space-between;align-items:center}h1{font-size:26px;margin:8px 0}p{line-height:1.7}header p{color:#b7c9dc;margin:0}.eyebrow{font-size:11px;letter-spacing:3px;color:#91b7e8}.badge{border:1px solid #496176;border-radius:20px;padding:8px 14px;font-size:12px}main{max-width:1410px;margin:auto;padding:24px}.panel,.card{background:white;border:1px solid var(--line);border-radius:14px;box-shadow:0 3px 12px #20344c04}details{padding:18px 22px}summary{cursor:pointer;font-weight:650}textarea{width:100%;min-height:190px;resize:vertical;background:#f8fafc;border:1px solid #cbd6e3;border-radius:8px;padding:14px;font:13px/1.6 monospace;color:var(--ink);margin-top:16px}button,select,input{font:inherit;border:1px solid #ccd7e4;border-radius:7px;padding:9px 12px;background:white;color:var(--ink)}button{cursor:pointer}button:hover{background:#edf3ff}button.primary{background:var(--blue);color:white;border-color:var(--blue)}button:disabled{opacity:.4;cursor:not-allowed}:focus-visible{outline:3px solid #83b6ff;outline-offset:2px}.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}.hint{color:var(--muted);font-size:12px}.status{padding:13px 16px;margin:16px 0;background:#e9f1ff;border-left:3px solid var(--blue);line-height:1.7;white-space:pre-line}.status.error{background:#fff0f1;border-color:var(--red)}.section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:26px 0 14px}h2{font-size:18px;margin:0}h3{font-size:15px;margin:0}.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.card{padding:20px}.card .value{font-size:27px;letter-spacing:-1px;margin:16px 0 10px;font-weight:700}.sub{font-size:12px;color:var(--muted);line-height:1.8}.delta{margin-top:12px;font-size:12px;padding-top:12px;border-top:1px solid var(--line)}.charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:20px}.chart{padding:22px;min-width:0}.chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.legend{font-size:11px;color:var(--muted);margin-top:13px}.dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin:0 5px 0 10px}svg{width:100%;height:auto;display:block;overflow:visible}svg text{font:11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#76879a}.negative{color:var(--red)}.positive{color:var(--green)}.table-panel{margin-top:20px;padding:22px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}th,td{padding:14px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th{font-size:12px;color:var(--muted);background:#f8fafc}th:first-child,td:first-child{text-align:left}tbody tr:hover{background:#f5f8ff}footer{font-size:12px;color:var(--muted);padding:22px 0;line-height:1.8}.tooltip{position:fixed;pointer-events:none;background:#142b43;color:white;padding:12px;border-radius:8px;box-shadow:0 4px 20px #142b4333;font-size:12px;z-index:10;white-space:pre-line;max-width:300px}.empty{padding:70px 20px;text-align:center;color:var(--muted)}@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){header{padding:24px}.badge{display:none}main{padding:14px}.kpis{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}.card{padding:15px}.card .value{font-size:23px}.section-title{flex-wrap:wrap}}@media(max-width:380px){.kpis{grid-template-columns:1fr}}
+</style></head><body>
+<header><div><div class="eyebrow">FINANCIAL INTELLIGENCE / MOPS</div><h1>現金流分析室</h1><p>從財務報表，讀懂企業的現金動能。</p></div><span class="badge">● 本機解析 · 資料不上傳</span></header>
+<main><details class="panel" open><summary>匯入報表 <span class="hint">／貼上 MOPS 表格、CSV 或 TSV</span></summary><label for="source" class="hint">保留科目、兩期欄位與單位資訊；欄位順序應為當期、前期。</label><textarea id="source" spellcheck="false" placeholder="會計科目&#9;115年1月1日至6月30日&#9;114年1月1日至6月30日&#10;營業活動之淨現金流入（流出）&#9;1,000,000&#9;850,000"></textarea><div class="controls"><button id="parse" class="primary">解析並更新儀表板</button><button id="upload" type="button">上傳報表並解析</button><input id="reportFile" type="file" accept=".csv,.tsv,.txt,.html,.htm" hidden><span id="fileName" class="hint"></span><button id="sample">載入台積電範例數據</button><label>來源單位 <select id="unit"><option value="auto">自動辨識</option><option value="1">元</option><option value="1000">仟元</option><option value="1000000">百萬元</option><option value="100000000">億元</option></select></label><span class="hint">支援 CSV、TSV、TXT、HTML（UTF-8 / Big5）；CSV 千分位數字請用雙引號包住。</span></div></details>
+<div id="status" class="status" role="status" aria-live="polite">尚未匯入資料。貼上兩期報表，或載入示意範例開始分析。</div>
+<div class="section-title"><h2>核心財務指標</h2><label class="hint">金額顯示 <select id="display"><option value="100000000">億元</option><option value="1000000">百萬元</option><option value="1000">仟元</option></select></label></div><div id="kpis" class="kpis"></div>
+<div class="charts"><section class="panel chart"><div class="chart-head"><h3>現金流結構對比</h3><span class="hint">當期 / 前期</span></div><div class="legend"><span class="dot" style="background:#168879"></span>當期正值 <span class="dot" style="background:#3568df"></span>前期正值 <span class="dot" style="background:#cc5265"></span>當期負值 <span class="dot" style="background:#e49a55"></span>前期負值</div><div id="bars"></div></section><section class="panel chart"><div class="chart-head"><h3>現金餘額變動橋接</h3><select id="waterPeriod" aria-label="瀑布圖期間"><option value="0">當期</option><option value="1">前期</option></select></div><div id="waterNote" class="legend">期初 → 三大活動 → 匯率 → 期末</div><div id="waterfall"></div></section></div>
+<section class="panel table-panel"><div class="section-title" style="margin-top:0"><h2>財務數據明細</h2><div class="controls" style="margin:0"><input id="search" placeholder="搜尋會計科目" aria-label="搜尋會計科目"><button id="export" disabled>匯出 CSV</button></div></div><div class="table-wrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div></section>
+<footer>計算口徑：FCF = 營業現金流 − |CapEx|；股利覆蓋率 = FCF ÷ |現金股利|；現金流品質 = 營業現金流 ÷ 稅前淨利。<br>金額變動率 =（當期 − 前期）÷ |前期|；前期為零時不計算。比率卡片顯示百分點或倍數差。缺漏科目不視為零；明確空白或「-」數值欄視為零。無法辨識單位時採仟元並提示。</footer></main><div id="tooltip" class="tooltip" hidden></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);let report=null;
+const SAMPLE=`台積電 2330｜教學示意資料，非實際公告數據
+現金流量表
+單位：新台幣仟元
+會計科目\t115年1月1日至6月30日\t114年1月1日至6月30日
+繼續營業單位稅前淨利\t650,000,000\t520,000,000
+折舊費用\t300,000,000\t260,000,000
+攤銷費用\t8,000,000\t7,000,000
+營業活動之淨現金流入（流出）\t950,000,000\t780,000,000
+取得不動產、廠房及設備\t(620,000,000)\t(510,000,000)
+投資活動之淨現金流入（流出）\t(650,000,000)\t(530,000,000)
+發放現金股利\t(210,000,000)\t(180,000,000)
+籌資活動之淨現金流入（流出）\t(220,000,000)\t(190,000,000)
+匯率變動對現金及約當現金之影響\t15,000,000\t(10,000,000)
+本期現金及約當現金增加（減少）數\t95,000,000\t50,000,000
+期初現金及約當現金餘額\t1,800,000,000\t1,500,000,000
+期末現金及約當現金餘額\t1,895,000,000\t1,550,000,000`;
+const normalize=s=>s.normalize('NFKC').replace(/[\s，,、()（）:：]/g,'');
+// 僅接受完整數值，避免將科目代碼、日期或文字的一部分誤作金額。
+function number(s){s=s.normalize('NFKC').trim().replace(/[−–]/g,'-').replace(/,/g,'').replace(/\s/g,'');if(s===''||s==='-'||s==='—')return 0;if(/^\(.*\)$/.test(s))s='-'+s.slice(1,-1);if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(s))return null;const n=Number(s.replace('%',''));return Number.isFinite(n)?n:null;}
+// 原生 CSV 狀態機：保留空欄、引號內逗號與換行，支援雙引號跳脫。
+function csv(text,delimiter){let rows=[],row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){let c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(c===delimiter&&!quoted){row.push(cell);cell='';}else if(c==='\n'&&!quoted){row.push(cell);rows.push(row);row=[];cell='';}else if(c!=='\r')cell+=c;}if(quoted)throw Error('CSV 雙引號未閉合，請檢查資料。');row.push(cell);rows.push(row);return rows;}
+function keyFor(label){const s=normalize(label);if(/營業活動/.test(s)&&/淨現金|現金.*淨/.test(s))return 'op';if(/投資活動/.test(s)&&/淨現金|現金.*淨/.test(s))return 'invest';if(/籌資活動|融資活動/.test(s)&&/淨現金|現金.*淨/.test(s))return 'finance';if(/取得|購置/.test(s)&&/不動產.*設備|固定資產/.test(s))return 'capex';if(/股利/.test(s)&&/發放|支付/.test(s)&&/現金/.test(s))return 'dividend';if(/稅前淨利|稅前淨損|稅前利益|稅前損益/.test(s))return 'profit';if(/折舊/.test(s))return 'depreciation';if(/攤銷/.test(s))return 'amortization';if(/匯率/.test(s)&&/現金/.test(s))return 'fx';if(/期初|年初/.test(s)&&/現金/.test(s))return 'opening';if(/期末/.test(s)&&/現金/.test(s))return 'closing';if(/現金及約當現金/.test(s)&&/增加|減少|增減/.test(s))return 'net';return null;}
+function parseReport(raw,override='auto'){
+ if(!raw.trim())throw Error('請先貼上兩期財務報表。');const warnings=[];
+ const hasTab=raw.includes('\t'),isCSV=!hasTab&&raw.split(/\r?\n/).some(l=>/^\s*"/.test(l)||/科目\s*,|項目\s*,/.test(l)||/[^\d\s],\s*["\d(（-]/.test(l));
+ const rows=hasTab?csv(raw,'\t'):isCSV?csv(raw,','):raw.split(/\r?\n/).map(l=>l.trim().split(/\s{2,}/));
+ let periods=[],indices=null;const dateRE=/(?:民國\s*)?\d{2,4}\s*年(?:\s*\d{1,2}\s*月(?:\s*\d{1,2}\s*日)?)?(?:\s*(?:至|到|~|～|－|-)\s*(?:\d{2,4}\s*年)?\s*\d{1,2}\s*月(?:\s*\d{1,2}\s*日)?)?(?:度)?/g;
+ for(const r of rows){let found=r.map((s,i)=>({s:s.trim(),i})).filter(x=>/\d{2,4}\s*年/.test(x.s)&&number(x.s)===null);if(found.length>=2){periods=found.slice(0,2).map(x=>x.s);indices=found.slice(0,2).map(x=>x.i);break;}const m=r.join(' ').match(dateRE);if(m&&m.length>=2){periods=m.slice(0,2);break;}}
+ if(periods.length<2){periods=['當期','前期'];warnings.push('未辨識兩期表頭，依數值欄順序視為當期、前期。');}
+ let unit=override==='auto'?null:Number(override);if(!unit){const u=raw.match(/單位\s*[:：]?\s*([^\r\n]+)/);if(u){unit=/億/.test(u[1])?1e8:/百萬/.test(u[1])?1e6:/仟|千/.test(u[1])?1e3:/元/.test(u[1])?1:null;}if(!unit){unit=1000;warnings.push('未辨識來源單位，暫採仟元；請確認或手動指定。');}}
+ const data=[],keys={};let rejected=0;
+ for(let r of rows){if(r.length===1&&!hasTab&&!isCSV){const m=r[0].match(/^(.*?)\s+([()（）+\-−\d,.]+|—)\s+([()（）+\-−\d,.]+|—)\s*$/);if(m)r=[m[1],m[2],m[3]];}
+ let start=r.findIndex(s=>/[\u3400-\u9fffA-Za-z]/.test(s)&&!/^\s*[A-Za-z]?\d+\s*$/.test(s));if(start<0)continue;let label=r[start].trim();if(!label||/^單位|公司名稱|教學示意/.test(label))continue;
+ let vals=null;if(indices&&indices[0]>start&&indices[1]<r.length){const pair=indices.map(i=>number(r[i]));if(pair.every(v=>v!==null))vals=pair;}
+ if(!vals){const tail=r.slice(start+1);if(tail.length>=2&&tail.every(s=>number(s)!==null)){if(tail.length===2)vals=tail.map(number);else if(tail.length===4&&tail.some(s=>s.includes('%'))){vals=[number(tail[0]),number(tail[2])];}else{rejected++;continue;}}}
+ if(!vals)continue;if(/\d{2,4}\s*年/.test(label))continue;const row={label,values:vals.map(v=>v*unit)};data.push(row);const key=keyFor(label);if(key){if(keys[key]){warnings.push('核心科目重複：'+label+'；該指標停用，請移除重複報表。');keys[key].duplicate=true;}else keys[key]=row;}}
+ if(!data.length)throw Error('未能辨識有效的兩期數值欄。請保留 Tab 分欄，或使用正確引號的 CSV；空格格式請提供科目及兩個金額。');
+ for(const k in keys)if(keys[k].duplicate)delete keys[k];
+ if(!keys.op)warnings.push('未能辨識到營業活動現金流欄位，請確認資料格式；已保留通用報表明細。');if(rejected)warnings.push(`${rejected} 列包含多個不明數值欄，已略過；請僅貼上兩期金額或保留清楚的期間表頭。`);
+ return {data,keys,periods,unit,warnings,sample:raw.includes('教學示意資料')};
+}
+const val=(k,p)=>report?.keys[k]?.values[p]??null;
+const safe=(fn,...v)=>v.some(x=>x===null)?null:fn(...v);
+const fcf=p=>safe((a,b)=>a-Math.abs(b),val('op',p),val('capex',p));
+const divide=(a,b)=>a===null||b===null||b<=0?null:a/b;
+const change=(a,b)=>a===null||b===null||b===0?null:(a-b)/Math.abs(b)*100;
+const nf=new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2});
+const unitLabel=()=>$('display').selectedOptions[0].text;
+const fmt=(v,amount=true)=>v===null?'未提供':nf.format(amount?v/Number($('display').value):v);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function kpis(){const specs=[['自由現金流',fcf,'money','營業現金流 − |資本支出|'],['資本支出 / 營業現金流',p=>safe(x=>x*100,divide(safe(Math.abs,val('capex',p)),val('op',p))),'percent','衡量營業現金的再投資比例'],['現金股利支付覆蓋率',p=>divide(fcf(p),safe(Math.abs,val('dividend',p))),'ratio','自由現金流 ÷ |現金股利|'],['本期淨現金增減',p=>val('net',p),'money','現金及約當現金增加／減少'],['營業現金流 / 稅前淨利',p=>divide(val('op',p),val('profit',p)),'ratio','衡量獲利的現金轉換品質']];$('kpis').innerHTML=specs.map(([name,fn,type,note])=>{const a=fn(0),b=fn(1),suffix=type==='money'?unitLabel():type==='percent'?'%':'倍',delta=type==='money'?change(a,b):safe((x,y)=>x-y,a,b);return `<article class="card"><h3>${name}</h3><div class="value ${a<0?'negative':''}">${a===null?'—':fmt(a,type==='money')} <small style="font-size:12px;font-weight:400">${a===null?'':suffix}</small></div><div class="sub">前期 ${b===null?'—':fmt(b,type==='money')+' '+suffix}<br>${note}</div><div class="delta">${type==='money'?'YoY':'兩期差異'}　${delta===null?'不適用':(delta>0?'+':'')+fmt(delta,false)+(type==='money'?'%':type==='percent'?' 百分點':' 倍')}</div></article>`;}).join('');}
+function table(){const names=report?.periods||['當期','前期'];$('thead').innerHTML='<tr>'+['會計科目',...names,'差異增減','變動 %'].map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr>';const rows=(report?.data||[]).filter(r=>r.label.includes($('search').value.trim()));$('tbody').innerHTML=rows.length?rows.map(r=>{const [a,b]=r.values,d=a-b,c=change(a,b);return '<tr><td>'+esc(r.label)+'</td>'+[a,b,d].map(x=>`<td class="${x<0?'negative':''}">${fmt(x)}</td>`).join('')+`<td class="${c<0?'negative':''}">${c===null?'不適用':fmt(c,false)+'%'}</td></tr>`;}).join(''):'<tr><td colspan="5" class="empty">尚無符合的資料</td></tr>';}
+// SVG 採固定 viewBox，隨容器縮放；每個資料長條均可滑鼠及鍵盤聚焦。
+const NS='http://www.w3.org/2000/svg';function svgEl(tag,attrs={},text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!==undefined)e.textContent=text;return e;}
+function chartBase(id,values){const host=$(id);host.replaceChildren();const s=svgEl('svg',{viewBox:'0 0 600 330',role:'img','aria-label':id==='bars'?'兩期現金流比較圖':'現金流瀑布圖'});host.append(s);let min=Math.min(0,...values),max=Math.max(0,...values);if(max===min)max=min+1;const span=max-min;max+=span*.12;min-=span*.08;const y=v=>270-(v-min)/(max-min)*225;for(let i=0;i<=4;i++){let v=min+(max-min)*i/4;s.append(svgEl('line',{x1:68,x2:585,y1:y(v),y2:y(v),stroke:'#e7edf4'}),svgEl('text',{x:61,y:y(v)+4,'text-anchor':'end'},nf.format(v/Number($('display').value))));}s.append(svgEl('line',{x1:68,x2:585,y1:y(0),y2:y(0),stroke:'#8292a4','stroke-width':1.3}),svgEl('text',{x:68,y:20},unitLabel()));return {s,y};}
+function tip(e,text){e.setAttribute('tabindex','0');e.setAttribute('aria-label',text);e.append(svgEl('title',{},text));const show=(x,y)=>{const t=$('tooltip');t.textContent=text;t.hidden=false;t.style.left=Math.max(6,Math.min(x+12,innerWidth-t.offsetWidth-8))+'px';t.style.top=Math.max(6,Math.min(y+12,innerHeight-t.offsetHeight-8))+'px';};e.addEventListener('pointermove',ev=>show(ev.clientX,ev.clientY));e.addEventListener('pointerleave',()=> $('tooltip').hidden=true);e.addEventListener('focus',()=>{const r=e.getBoundingClientRect();show(r.x,r.y);});e.addEventListener('blur',()=> $('tooltip').hidden=true);}
+function bars(){const labels=['營業活動','投資活動','籌資活動','自由現金流'],v=['op','invest','finance'].map(k=>[val(k,0),val(k,1)]);v.push([fcf(0),fcf(1)]);if(v.flat().every(x=>x===null)){$('bars').innerHTML='<div class="empty">匯入現金流資料後呈現</div>';return;}const {s,y}=chartBase('bars',v.flat().filter(x=>x!==null));v.forEach((pair,i)=>{const x=91+i*128;s.append(svgEl('text',{x:x+36,y:301,'text-anchor':'middle'},labels[i]));pair.forEach((n,p)=>{if(n===null){s.append(svgEl('text',{x:x+p*35+15,y:y(0)-8,'text-anchor':'middle'},'—'));return;}let r=svgEl('rect',{x:x+p*35,y:Math.min(y(n),y(0)),width:28,height:Math.max(1,Math.abs(y(n)-y(0))),rx:3,fill:n<0?(p?'#e49a55':'#cc5265'):(p?'#3568df':'#168879')});tip(r,`${labels[i]} · ${report.periods[p]}\n${fmt(n)} ${unitLabel()}`);s.append(r);});});}
+function waterfall(){const p=Number($('waterPeriod').value);let start=val('opening',p),end=val('closing',p),net=val('net',p),fx=val('fx',p);const flows=['op','invest','finance'].map(k=>val(k,p));let notes=[];if(start===null&&end!==null&&net!==null){start=end-net;notes.push('期初由期末 − 淨增減推算');}if(start===null||end===null||flows.some(v=>v===null)){$('waterfall').innerHTML='<div class="empty">需期初（或期末與淨增減）、期末與三大活動資料<br>才能建立現金橋接</div>';$('waterNote').textContent='缺漏資料不以零補值';return;}
+ let labels=['期初','營業','投資','籌資'];let changes=[...flows];if(fx!==null){labels.push('匯率');changes.push(fx);}else notes.push('未提供匯率影響');let sum=start+changes.reduce((a,b)=>a+b,0),residual=end-sum;if(Math.abs(residual)>.5){labels.push('待調節');changes.push(residual);notes.push('含待調節差額 '+fmt(residual)+' '+unitLabel()+'（非假設匯率）');}if(net!==null&&Math.abs(end-start-net)>.5)notes.push('警示：期末 − 期初與本期淨增減不一致');labels.push('期末');let segments=[[0,start]],running=start;for(const c of changes){segments.push([running,running+c]);running+=c;}segments.push([0,end]);const {s,y}=chartBase('waterfall',segments.flat()),step=510/segments.length;segments.forEach(([a,b],i)=>{const x=75+i*step,isTotal=i===0||i===segments.length-1,color=isTotal?'#3568df':labels[i]==='待調節'?'#9774c7':b>=a?'#168879':'#cc5265';const r=svgEl('rect',{x,y:Math.min(y(a),y(b)),width:step*.58,height:Math.max(1,Math.abs(y(a)-y(b))),fill:color,rx:2});tip(r,`${report.periods[p]} · ${labels[i]}\n${fmt(isTotal?b:b-a)} ${unitLabel()}${isTotal?'':'\n累計 '+fmt(b)+' '+unitLabel()}`);s.append(r,svgEl('text',{x:x+step*.29,y:301,'text-anchor':'middle'},labels[i]));if(i<segments.length-2)s.append(svgEl('line',{x1:x+step*.58,x2:x+step,y1:y(b),y2:y(b),stroke:'#aab8c9','stroke-dasharray':'3 3'}));});$('waterNote').textContent=notes.join('；')||'期初與期末餘額已勾稽一致';}
+function render(){kpis();table();bars();waterfall();}
+function run(){try{report=parseReport($('source').value,$('unit').value);$('status').className='status';$('status').textContent=`${report.sample?'示意範例（非台積電正式公告）｜':''}已解析 ${report.data.length} 個科目 · ${report.periods.join(' / ')}\n${report.warnings.join('\n')||'資料解析完成。比率分母為零或負值時顯示不適用。'}`;$('export').disabled=false;render();}catch(e){report=null;$('export').disabled=true;$('status').className='status error';$('status').textContent=e.message;render();}}
+function exportCSV(){if(!report)return;const q=x=>'"'+String(x).replace(/"/g,'""')+'"';const rows=[['會計科目',...report.periods.map(s=>s+'（元）'),'差異增減（元）','變動百分比'],...report.data.map(r=>{let [a,b]=r.values;return [/^[=+\-@\t\r]/.test(r.label)?"'"+r.label:r.label,a,b,a-b,change(a,b)??'不適用'];})];const blob=new Blob(['\uFEFF'+rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='MOPS-'+(report.sample?'示意範例-':'')+'財務數據.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+// 全程在本機讀取；UTF-8 解碼失敗時改用台灣報表常見的 Big5。
+function decodeReport(buffer){
+ const bytes=new Uint8Array(buffer);
+ if(bytes[0]===0xff&&bytes[1]===0xfe)return new TextDecoder('utf-16le').decode(bytes);
+ if(bytes[0]===0xfe&&bytes[1]===0xff)return new TextDecoder('utf-16be').decode(bytes);
+ try{return new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{return new TextDecoder('big5').decode(bytes);}
+}
+function htmlReportText(text){
+ // 在分離的文件中解析，僅擷取文字，不將上傳的 HTML 插入畫面。
+ const doc=new DOMParser().parseFromString(text,'text/html');
+ doc.querySelectorAll('script,style,iframe,object').forEach(e=>e.remove());
+ const tables=[...doc.querySelectorAll('table')];
+ if(!tables.length)throw Error('HTML 檔案中找不到報表表格，請改上傳 CSV、TSV 或 TXT。');
+ const lines=tables.map(t=>[...t.rows].map(r=>[...r.cells].map(c=>c.textContent.replace(/\s+/g,' ').trim()).join('\t')).join('\n'));
+ tables.forEach(t=>t.remove());
+ const metadata=(doc.body.textContent||'').replace(/\s+/g,' ').trim();
+ return metadata+'\n'+lines.join('\n');
+}
+async function uploadReport(event){
+ const file=event.target.files[0];if(!file)return;
+ const buttons=['upload','parse','sample'];buttons.forEach(id=>$(id).disabled=true);
+ $('status').className='status';$('status').textContent='正在讀取報表：'+file.name;
+ try{
+  if(!/\.(csv|tsv|txt|html?)$/i.test(file.name))throw Error('請上傳 CSV、TSV、TXT 或 HTML 檔案；Excel 請先另存為 CSV。');
+  if(file.size>10*1024*1024)throw Error('檔案超過 10 MB，請先縮減為需要分析的報表。');
+  let text=decodeReport(await file.arrayBuffer());
+  if(/\.html?$/i.test(file.name))text=htmlReportText(text);
+  $('source').value=text;$('fileName').textContent=file.name;$('search').value='';
+  run();
+ }catch(error){
+  report=null;$('export').disabled=true;render();
+  $('status').className='status error';$('status').textContent=error.message;
+ }finally{
+  buttons.forEach(id=>$(id).disabled=false);
+  // 清空檔案選擇，讓同一個檔案修改後仍可再次上傳。
+  event.target.value='';
+ }
+}
+$('upload').onclick=()=>$('reportFile').click();$('reportFile').onchange=uploadReport;
+$('parse').onclick=run;$('sample').onclick=()=>{$('fileName').textContent='';$('source').value=SAMPLE;$('unit').value='auto';run();};$('display').onchange=render;$('waterPeriod').onchange=waterfall;$('search').oninput=table;$('export').onclick=exportCSV;render();
+</script></body></html>
+
