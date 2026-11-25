@@ -6,8 +6,9 @@
 
 ## 📱 專案亮點 (Highlights)
 
-- **Mobile-First 響應式架構**：首頁採用手機優先體驗設計，整合底部導航欄、分類標籤、深淺色模式切換與快捷數據看板。
-- **純前端即開即用 (Zero-Config)**：所有作品均為純原生前端設計（HTML5 / Tailwind CSS / Vanilla JS），無須額外建置後端即可直接運行。
+- **Mobile-First 響應式架構**：首頁採用手機優先體驗設計，整合底部導航欄、工作經歷、分類標籤、深淺色模式切換與快捷數據看板。
+- **緯育個人專題《揪一下 Squad Up》**：線上即時聚會協調平台（[https://squad-up-tw.vercel.app/](https://squad-up-tw.vercel.app/)），支援免註冊開房、行事曆熱度圖、候選地點投票與日曆匯出。
+- **純前端即開即用 (Zero-Config)**：課堂作品均為純原生前端設計（HTML5 / Tailwind CSS / Vanilla JS），無須額外建置後端即可直接運行。
 - **高隱私與安全演算法**：包含多款在地端瀏覽器運算之個資脫敏（PII 去識別化）工具，資料 100% 不上傳伺服器。
 
 ---
@@ -69,6 +70,7 @@ PORTFOLIO/
 
 ## 🌐 線上展示與社群連結 (Links)
 
+- **線上專題**：[揪一下 Squad Up](https://squad-up-tw.vercel.app/) — 緯育受訓個人專題（線上即時聚會協調平台）
 - **LinkedIn**：[https://www.linkedin.com/in/cassellteng](https://www.linkedin.com/in/cassellteng)
 - **Behance**：[https://www.behance.net/cassellteng](https://www.behance.net/cassellteng)
 
